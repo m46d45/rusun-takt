@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import traceback
+from pathlib import Path
 
 import pandas as pd
 import streamlit as st
@@ -27,11 +28,111 @@ from rusun_takt_engine import (
     day_to_week,
 )
 
+ROOT = Path(__file__).resolve().parent
+LOGO = ROOT / "assets" / "logo.png"
+LOGO_SM = ROOT / "assets" / "logo_sm.png"
+FAVICON = ROOT / "assets" / "favicon.png"
+
 st.set_page_config(
     page_title="Rusun Takt",
-    page_icon="🏗️",
+    page_icon=str(FAVICON) if FAVICON.exists() else "🏗️",
     layout="wide",
     initial_sidebar_state="expanded",
+)
+
+# Cerah & semangat
+st.markdown(
+    """
+<style>
+  .stApp {
+    background: linear-gradient(165deg, #e0f2fe 0%, #f0f9ff 40%, #fff7ed 100%);
+  }
+  [data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 100%);
+    border-right: 1px solid #bae6fd;
+  }
+  [data-testid="stSidebar"] * {
+    color: #0f172a;
+  }
+  .block-container { padding-top: 1rem; max-width: 1100px; }
+  div[data-testid="stMetricValue"] {
+    font-variant-numeric: tabular-nums;
+    color: #0369a1 !important;
+  }
+  div[data-testid="stMetricLabel"] { color: #475569 !important; }
+  .hero {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    background: #ffffff;
+    border: 2px solid #7dd3fc;
+    border-radius: 18px;
+    padding: 1rem 1.25rem;
+    box-shadow: 0 8px 24px rgba(14, 165, 233, 0.12);
+    margin-bottom: 0.75rem;
+  }
+  .hero img {
+    width: 88px;
+    height: 88px;
+    border-radius: 16px;
+    object-fit: cover;
+    border: 2px solid #fde68a;
+    background: #fff;
+  }
+  .hero h1 {
+    margin: 0;
+    font-size: 1.85rem;
+    color: #0c4a6e;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+  .hero p {
+    margin: 0.25rem 0 0;
+    color: #475569;
+    font-size: 0.98rem;
+    line-height: 1.4;
+  }
+  .badge-row { margin-top: 0.45rem; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .badge {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #fcd34d;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .badge.blue { background: #e0f2fe; color: #075985; border-color: #7dd3fc; }
+  .badge.green { background: #dcfce7; color: #166534; border-color: #86efac; }
+  .card {
+    background: #ffffff;
+    border: 1px solid #bae6fd;
+    border-radius: 14px;
+    padding: 0.9rem 1rem;
+    margin: 0.6rem 0 1rem;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  }
+  h2, h3 { color: #0c4a6e !important; }
+  .stButton > button[kind="primary"] {
+    background: linear-gradient(90deg, #0284c7, #0ea5e9) !important;
+    border: none !important;
+    color: white !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+  }
+  .zone-tile {
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+    color: #fff;
+    min-height: 68px;
+    font-weight: 700;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+  }
+</style>
+""",
+    unsafe_allow_html=True,
 )
 
 
@@ -46,14 +147,43 @@ def start_label(sw: int) -> str:
     return "JIT" if int(sw) == START_JIT else "Minggu {}".format(int(sw) + 1)
 
 
-def main() -> None:
-    st.title("Rusun Takt")
-    st.caption(
-        "Simulasi lean construction · parade of trades · push vs JIT · "
-        "rusun 3 lantai"
+def hero() -> None:
+    logo_b64 = ""
+    if LOGO.exists():
+        import base64
+
+        logo_b64 = base64.b64encode(LOGO.read_bytes()).decode("ascii")
+    img_html = (
+        '<img src="data:image/png;base64,{}" alt="Logo Rusun Takt" />'.format(logo_b64)
+        if logo_b64
+        else ""
+    )
+    st.markdown(
+        """
+<div class="hero">
+  {img}
+  <div>
+    <h1>Rusun Takt</h1>
+    <p>Simulasi lean construction untuk rusun 3 lantai — parade of trades, push vs JIT, waste & margin.</p>
+    <div class="badge-row">
+      <span class="badge blue">3 lantai</span>
+      <span class="badge">5 zona / lantai</span>
+      <span class="badge green">7 wagon</span>
+      <span class="badge blue">1 minggu = 7 hari</span>
+    </div>
+  </div>
+</div>
+""".format(
+            img=img_html
+        ),
+        unsafe_allow_html=True,
     )
 
-    with st.expander("Manual singkat", expanded=False):
+
+def main() -> None:
+    hero()
+
+    with st.expander("📖 Manual singkat", expanded=False):
         st.markdown(
             """
 1. **Wagon** berurutan: Struktur → Pelat → Dinding → MEP → Plester → Keramik → Cat
@@ -69,7 +199,9 @@ def main() -> None:
         )
 
     with st.sidebar:
-        st.header("Setup")
+        if LOGO_SM.exists():
+            st.image(str(LOGO_SM), width=96)
+        st.markdown("### Setup simulasi")
         owner_days = st.number_input(
             "Durasi owner (hari)", min_value=1, value=int(DEFAULT_OWNER_DURATION)
         )
@@ -92,7 +224,7 @@ def main() -> None:
             default_sw = 0
             default_lo, default_hi = 1, 6
 
-        st.subheader("Tim kerja")
+        st.markdown("#### Tim kerja")
         team_rows = []
         start_options = list(range(7)) + [START_JIT]
 
@@ -100,47 +232,46 @@ def main() -> None:
             return "Just-in-Time (JIT)" if x == START_JIT else "Minggu {}".format(x + 1)
 
         for i, defn in enumerate(TEAMS):
-            st.markdown("**{}. {}**".format(i + 1, defn["short"]))
-            c1, c2, c3 = st.columns(3)
-            start = c1.selectbox(
-                "Start",
-                start_options,
-                index=start_options.index(default_sw),
-                format_func=fmt_start,
-                key="start_{}".format(i),
-            )
-            lo = c2.number_input(
-                "Min hari",
-                min_value=1,
-                max_value=9,
-                value=int(default_lo),
-                key="lo_{}".format(i),
-            )
-            hi = c3.number_input(
-                "Max hari",
-                min_value=1,
-                max_value=9,
-                value=int(default_hi),
-                key="hi_{}".format(i),
-            )
-            cost_ui = st.number_input(
-                "Biaya/hari (x Rp1000)",
-                min_value=0,
-                value=int(DEFAULT_DAILY_COST // 1000),
-                step=10,
-                key="cost_{}".format(i),
-            )
-            team_rows.append(
-                TeamSetup(
-                    start_week=int(start),
-                    dice_min=int(lo),
-                    dice_max=int(hi),
-                    daily_cost=int(cost_ui) * 1000,
+            with st.expander("{}. {}".format(i + 1, defn["short"]), expanded=(i == 0)):
+                start = st.selectbox(
+                    "Start Kerja",
+                    start_options,
+                    index=start_options.index(default_sw),
+                    format_func=fmt_start,
+                    key="start_{}".format(i),
                 )
-            )
-            st.divider()
+                c1, c2 = st.columns(2)
+                lo = c1.number_input(
+                    "Min hari",
+                    min_value=1,
+                    max_value=9,
+                    value=int(default_lo),
+                    key="lo_{}".format(i),
+                )
+                hi = c2.number_input(
+                    "Max hari",
+                    min_value=1,
+                    max_value=9,
+                    value=int(default_hi),
+                    key="hi_{}".format(i),
+                )
+                cost_ui = st.number_input(
+                    "Biaya/hari (× Rp1.000)",
+                    min_value=0,
+                    value=int(DEFAULT_DAILY_COST // 1000),
+                    step=10,
+                    key="cost_{}".format(i),
+                )
+                team_rows.append(
+                    TeamSetup(
+                        start_week=int(start),
+                        dice_min=int(lo),
+                        dice_max=int(hi),
+                        daily_cost=int(cost_ui) * 1000,
+                    )
+                )
 
-        run_btn = st.button("Jalankan simulasi", type="primary", use_container_width=True)
+        run_btn = st.button("▶ Jalankan simulasi", type="primary", use_container_width=True)
 
     if run_btn:
         cfg = SimConfig(
@@ -148,14 +279,20 @@ def main() -> None:
             owner_duration_days=int(owner_days),
             contract_value=int(contract_jt) * 1_000_000,
         )
-        with st.spinner("Menjalankan simulasi..."):
+        with st.spinner("Menjalankan simulasi…"):
             final = run_to_completion(cfg, seed=int(seed))
         st.session_state["result"] = final
 
     if "result" not in st.session_state:
-        st.info(
-            "Atur setup di sidebar, lalu klik **Jalankan simulasi**. "
-            "Bandingkan preset Push vs JIT."
+        st.markdown(
+            """
+<div class="card">
+  <strong>Mulai di sini</strong><br/>
+  Atur setup di sidebar kiri, pilih preset <em>Push</em> atau <em>JIT</em>,
+  lalu klik <strong>Jalankan simulasi</strong>. Bandingkan waste & margin-nya!
+</div>
+""",
+            unsafe_allow_html=True,
         )
         return
 
@@ -209,7 +346,7 @@ def main() -> None:
         {"Zona selesai": [t.progress for t in final.teams]},
         index=[t["short"] for t in TEAMS],
     )
-    st.bar_chart(prog)
+    st.bar_chart(prog, color="#0ea5e9")
 
     st.subheader("Takt plan (minggu)")
     st.caption(
@@ -230,7 +367,7 @@ def main() -> None:
     )
     st.dataframe(takt_df, use_container_width=True)
 
-    st.subheader("Zona (hijau = selesai semua wagon)")
+    st.subheader("Ilustrasi zona")
     last_progress = final.teams[-1].progress
     for f in range(FLOORS - 1, -1, -1):
         cols = st.columns(5)
@@ -241,16 +378,15 @@ def main() -> None:
             for ti, t in enumerate(final.teams):
                 if t.progress > z:
                     highest = ti
-            color = TEAMS[highest]["color"] if highest >= 0 else "#334155"
-            check = " OK" if done else ""
+            color = TEAMS[highest]["color"] if highest >= 0 else "#94a3b8"
+            check = " ✓" if done else ""
             cols[zi].markdown(
-                '<div style="background:{color};border-radius:10px;padding:10px;'
-                'text-align:center;color:#fff;min-height:60px;'
-                'border:2px solid {border}">'
-                '<div style="font-size:11px;opacity:.85">Lt.{floor}</div>'
-                '<div style="font-weight:700">{label}{check}</div></div>'.format(
+                '<div class="zone-tile" style="background:{color};'
+                'border:3px solid {border}">'
+                '<div style="font-size:11px;opacity:.9;font-weight:600">Lt.{floor}</div>'
+                '<div>{label}{check}</div></div>'.format(
                     color=color,
-                    border="#34d399" if done else "transparent",
+                    border="#22c55e" if done else "transparent",
                     floor=f + 1,
                     label=ZONE_LABELS[zi],
                     check=check,
@@ -262,7 +398,7 @@ def main() -> None:
         for line in reversed(final.log[-25:]):
             st.text(line)
 
-    st.caption("Sumber: https://github.com/m46d45/rusun-takt")
+    st.caption("Rusun Takt · github.com/m46d45/rusun-takt")
 
 
 try:
