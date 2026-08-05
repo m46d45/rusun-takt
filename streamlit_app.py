@@ -409,19 +409,28 @@ def finance_html(state) -> str:
 
 
 
+
 def wagons_html(state) -> str:
-    max_waste = max((t.waste_cost for t in state.teams), default=0)
+    wastes = [t.waste_cost for t in state.teams]
+    max_waste = max(wastes) if wastes else 0
+    # satu pemenang saja (index terkecil jika seri)
+    max_i = -1
+    if max_waste > 0:
+        for i, w in enumerate(wastes):
+            if w == max_waste:
+                max_i = i
+                break
     parts = [
         '<div class="panel">',
         "<h2>Wagon / tim kerja</h2>",
-        '<div class="sub">Helm berwarna · bar progress · ★ waste tertinggi (latar oranye)</div>',
+        '<div class="sub">Helm berwarna · bar progress · ★ = waste tertinggi (oranye)</div>',
     ]
     for i, t in enumerate(state.teams):
         setup = state.config.teams[i]
         pct = min(100, (t.progress / TOTAL_UNITS) * 100) if TOTAL_UNITS else 0
         team_cost = t.days_on_site * setup.daily_cost
         wp = (t.waste_cost / team_cost * 100) if team_cost > 0 else 0.0
-        is_max = max_waste > 0 and t.waste_cost == max_waste and t.waste_cost > 0
+        is_max = i == max_i
         hot_cls = "hot" if is_max else ""
         star = " ★" if is_max else ""
         wcls = "w" if t.waste_cost > 0 else ""
@@ -487,7 +496,8 @@ def results_rows(state):
         total_waste += t.waste_cost
         team_cost = t.days_on_site * state.config.teams[i].daily_cost
         wp = (t.waste_cost / team_cost * 100) if team_cost > 0 else 0.0
-        is_max = max_waste > 0 and t.waste_cost == max_waste and t.waste_cost > 0
+        is_max = (max_waste > 0 and t.waste_cost == max_waste and t.waste_cost > 0
+                  and all(state.teams[j].waste_cost < max_waste for j in range(i)))
         body.append(
             {
                 "i": i,
@@ -903,7 +913,32 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
         st.session_state["_turbo"] = True
         st.rerun()
 
+
+    # ---- animasi: step dulu, baru render SEKALI (hindari panel dobel) ----
     state = st.session_state.sim_state
+    delay = delay  # from collect_setup
+    turbo = st.session_state.pop("_turbo", False)
+
+    if state is not None and st.session_state.running and not state.finished:
+        if turbo or delay <= 0:
+            guard = 0
+            while (
+                not st.session_state.sim_state.finished and guard < 2000
+            ):
+                st.session_state.sim_state = step_day(
+                    st.session_state.sim_state, st.session_state.rng
+                )
+                guard += 1
+            st.session_state.running = False
+        else:
+            st.session_state.sim_state = step_day(
+                st.session_state.sim_state, st.session_state.rng
+            )
+            if st.session_state.sim_state.finished:
+                st.session_state.running = False
+
+    state = st.session_state.sim_state
+
     if state is None:
         st.info("Klik **Start** untuk animasi hari-per-hari.")
         empty = create_initial_state(cfg)
@@ -916,50 +951,15 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
         st.markdown(wagons_html(empty), unsafe_allow_html=True)
         return
 
-    # Layout: kiri = ilustrasi, kanan = metrik/kontrak; wagon di BAWAH ilustrasi (full width)
+    # Satu render saja per frame (tidak pakai st.empty → tidak dobel)
     col_b, col_m = st.columns([1.4, 1])
     with col_b:
         st.markdown("##### Ilustrasi rusun")
-        bld = st.empty()
-        bld.markdown(render_building_html(state), unsafe_allow_html=True)
+        st.markdown(render_building_html(state), unsafe_allow_html=True)
     with col_m:
-        fin_ph = st.empty()
-        fin_ph.markdown(finance_html(state), unsafe_allow_html=True)
-    wag_ph = st.empty()
-    wag_ph.markdown(wagons_html(state), unsafe_allow_html=True)
+        st.markdown(finance_html(state), unsafe_allow_html=True)
+    st.markdown(wagons_html(state), unsafe_allow_html=True)
 
-    turbo = st.session_state.pop("_turbo", False)
-    if st.session_state.running and not state.finished:
-        if turbo or delay <= 0:
-            steps = 0
-            while (
-                not st.session_state.sim_state.finished
-                and steps < (800 if turbo else 1)
-            ):
-                st.session_state.sim_state = step_day(
-                    st.session_state.sim_state, st.session_state.rng
-                )
-                steps += 1
-            state = st.session_state.sim_state
-            bld.markdown(render_building_html(state), unsafe_allow_html=True)
-            fin_ph.markdown(finance_html(state), unsafe_allow_html=True)
-            wag_ph.markdown(wagons_html(state), unsafe_allow_html=True)
-            st.session_state.running = False if (
-                state.finished or turbo
-            ) else st.session_state.running
-            if not state.finished and not turbo and delay > 0:
-                time.sleep(delay)
-                st.rerun()
-            elif not state.finished and delay <= 0 and not turbo:
-                st.rerun()
-        else:
-            st.session_state.sim_state = step_day(
-                st.session_state.sim_state, st.session_state.rng
-            )
-            time.sleep(delay)
-            st.rerun()
-
-    state = st.session_state.sim_state
     if state.finished:
         st.success(
             "Selesai hari **{}** (minggu ke-{})".format(
@@ -972,17 +972,25 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
         with st.expander("Log"):
             for line in reversed(state.log[-30:]):
                 st.text(line)
+    elif st.session_state.running:
+        st.caption(
+            "▶ Berjalan · Minggu {} · hari {} · Jeda / Selesaikan".format(
+                day_to_week(state.day), state.day
+            )
+        )
+        time.sleep(max(delay, 0.05))
+        st.rerun()
     elif state.day > 0:
         st.caption(
-            "Berjalan · Minggu {} · hari {} · Jeda / 1 hari / Selesaikan".format(
+            "⏸ Jeda · Minggu {} · hari {} · Start lanjut / 1 hari / Selesaikan".format(
                 day_to_week(state.day), state.day
             )
         )
 
     st.caption(
-        "Rusun Takt · Streamlit ≈ sandbox · animasi terhalus di web preview · "
-        "github.com/m46d45/rusun-takt"
+        "Rusun Takt · github.com/m46d45/rusun-takt"
     )
+
 
 
 try:
