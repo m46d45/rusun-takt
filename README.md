@@ -48,3 +48,22 @@ React 19 · TypeScript · Vite · TanStack Start · Tailwind CSS
 ## Lisensi
 
 Proyek edukasi — silakan dipakai dan dimodifikasi untuk pembelajaran.
+
+
+## Streamlit (deploy online)
+
+Aplikasi Python untuk [Streamlit Community Cloud](https://share.streamlit.io):
+
+```bash
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+
+### Deploy ke streamlit.io
+
+1. Buka [share.streamlit.io](https://share.streamlit.io) dan login dengan GitHub
+2. **New app** → repo `m46d45/rusun-takt` → branch `main`
+3. Main file: `streamlit_app.py`
+4. Deploy
+
+File terkait: `streamlit_app.py`, `rusun_takt_engine.py`, `requirements.txt`, `.streamlit/config.toml`
