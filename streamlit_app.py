@@ -685,19 +685,44 @@ def collect_setup():
         return "JIT" if x == START_JIT else "Minggu {}".format(x + 1)
 
     team_rows = []
-    st.markdown(
-        '<p class="tiny" style="margin:.4rem 0 .2rem;font-weight:700;color:#0c4a6e">'
-        "TIM KERJA · START · VARIASI (bawah–atas) · BIAYA/HARI (× Rp1.000)</p>",
+    # Header sejajar dengan baris data (rasio kolom sama)
+    col_ratios = [1.5, 1.3, 0.7, 0.7, 0.9]
+    h1, h2, h3, h4, h5 = st.columns(col_ratios)
+    h1.markdown(
+        '<p style="margin:0;font-size:.65rem;font-weight:700;color:#64748b;'
+        'text-transform:uppercase;letter-spacing:.03em">Tim kerja</p>',
+        unsafe_allow_html=True,
+    )
+    h2.markdown(
+        '<p style="margin:0;font-size:.65rem;font-weight:700;color:#64748b;'
+        'text-transform:uppercase;letter-spacing:.03em">Start kerja</p>',
+        unsafe_allow_html=True,
+    )
+    h3.markdown(
+        '<p style="margin:0;font-size:.65rem;font-weight:700;color:#64748b;'
+        'text-transform:uppercase;letter-spacing:.03em">Bawah</p>',
+        unsafe_allow_html=True,
+    )
+    h4.markdown(
+        '<p style="margin:0;font-size:.65rem;font-weight:700;color:#64748b;'
+        'text-transform:uppercase;letter-spacing:.03em">Atas</p>',
+        unsafe_allow_html=True,
+    )
+    h5.markdown(
+        '<p style="margin:0;font-size:.65rem;font-weight:700;color:#64748b;'
+        'text-transform:uppercase;letter-spacing:.03em">Biaya/hari'
+        '<br/><span style="font-weight:500;text-transform:none">'
+        '(× Rp1.000)</span></p>',
         unsafe_allow_html=True,
     )
     for i, defn in enumerate(TEAMS):
-        a, b, c, d, e = st.columns([1.5, 1.3, 0.7, 0.7, 0.9])
+        a, b, c, d, e = st.columns(col_ratios)
         with a:
             st.markdown(
                 '<span style="display:inline-flex;width:22px;height:22px;border-radius:50%;'
                 "background:{c};color:#fff;font-size:11px;font-weight:800;align-items:center;"
                 'justify-content:center;margin-right:6px">{n}</span>'
-                "<b style=\"font-size:.85rem\">{name}</b>".format(
+                '<b style="font-size:.85rem">{name}</b>'.format(
                     c=defn["color"], n=i + 1, name=defn["short"]
                 ),
                 unsafe_allow_html=True,
