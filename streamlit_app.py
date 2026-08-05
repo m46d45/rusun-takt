@@ -279,7 +279,7 @@ def play_sfx(kind: str = "finish", announce: bool = True) -> None:
         return
     if announce:
         labels = {
-            "zone": "Zona selesai",
+            "zone": "Zona selesai (cek hijau — Cat lepas zona)",
             "team": "Tim selesai (semua zona Lt.1–3)",
             "finish": "Proyek selesai",
         }
@@ -295,18 +295,29 @@ def play_sfx(kind: str = "finish", announce: bool = True) -> None:
 
 
 def sfx_from_transition(prev, nxt) -> None:
-    """Satu suara per hari, prioritas: proyek > tim > zona."""
+    """Satu suara per hari, prioritas: proyek > tim > zona (cek hijau).
+
+    Zona selesai = wagon terakhir (Cat / tim 7) progress naik → checkmark hijau
+    di zona itu, BUKAN tiap wagon selesai di zona.
+    """
     if prev is None or nxt is None:
         return
+    # 3 — seluruh proyek
     if not prev.finished and nxt.finished:
         play_sfx("finish")
         return
+    # 2 — ada wagon yang baru menyelesaikan SEMUA zona (Lt.1–3)
     done_before = sum(1 for t in prev.teams if t.progress >= TOTAL_UNITS)
     done_after = sum(1 for t in nxt.teams if t.progress >= TOTAL_UNITS)
     if done_after > done_before:
         play_sfx("team")
         return
-    if sum(t.progress for t in nxt.teams) > sum(t.progress for t in prev.teams):
+    # 1 — zona selesai = progress wagon TERAKHIR (Cat) naik
+    #     (= isZoneComplete / cek hijau di ilustrasi)
+    last = len(TEAMS) - 1
+    zones_before = min(TOTAL_UNITS, prev.teams[last].progress if prev.teams else 0)
+    zones_after = min(TOTAL_UNITS, nxt.teams[last].progress if nxt.teams else 0)
+    if zones_after > zones_before:
         play_sfx("zone")
 
 
@@ -960,7 +971,7 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
 - **Jeda** / **1 hari** / **Selesaikan**
 - **Kecepatan** — Lambat (1 dtk) · Normal · Cepat · Instan
 - **Suara (3 event, beda jelas):**
-  1. **Ding** — satu zona selesai
+  1. **Ding** — **zona selesai** = cek hijau (wagon **Cat / tim 7** lepas zona itu), bukan tiap wagon
   2. **Do–mi** — satu tim selesai semua zona (Lt.1–3)
   3. **Fanfare** — seluruh proyek selesai  
   Tombol **Tes suara** memutar ketiganya berurutan. Saat jalan, muncul toast 🔊. Mode Instan/Selesaikan hanya fanfare.
@@ -1024,7 +1035,7 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
 })();
 </script>
 <p style="font-size:12px;color:#0c4a6e;margin:4px 0 0;font-weight:600">
-1 · Ding = zona selesai &nbsp;→&nbsp;
+1 · Ding = zona selesai (cek hijau) &nbsp;→&nbsp;
 2 · Do–mi = tim selesai Lt.1–3 &nbsp;→&nbsp;
 3 · Fanfare = proyek selesai
 </p>
@@ -1032,8 +1043,8 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
             height=40,
         )
         st.caption(
-            "Urutan tes: (1) ding zona · (2) dua nada tim · (3) fanfare proyek. "
-            "Saat simulasi, toast 🔊 ikut menjelaskan event."
+            "Urutan tes: (1) ding zona (cek hijau / Cat lepas) · (2) do–mi tim · (3) fanfare proyek. "
+            "Ding hanya saat zona benar-benar selesai, bukan tiap wagon."
         )
 
     if start_clicked:
