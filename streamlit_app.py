@@ -220,81 +220,82 @@ def fmt_rp(n: float) -> str:
 
 
 
-def play_sfx(kind: str = "finish") -> None:
-    """Tiga suara mesin berbeda (butuh interaksi user dulu, mis. Start).
 
-    1) zone  — beep-beep naik (zona selesai)
-    2) team  — ting logam (satu wagon/tim selesai semua zona)
-    3) finish — fanfare singkat (proyek selesai)
+def play_sfx(kind: str = "finish", announce: bool = True) -> None:
+    """Tiga suara = tiga event (masing-masing satu karakter jelas).
+
+    1) zone   — SATU ding pendek (zona selesai)
+    2) team   — dua nada do–mi (tim selesai semua zona Lt.1–3)
+    3) finish — fanfare (~1 dtk) proyek selesai
     """
     scripts = {
         "zone": """
           const c=new (window.AudioContext||window.webkitAudioContext)();
-          function chirp(f0,f1,t0,dur,g0){
-            const o=c.createOscillator(),g=c.createGain();
-            o.type='square';
-            o.frequency.setValueAtTime(f0,c.currentTime+t0);
-            o.frequency.exponentialRampToValueAtTime(f1,c.currentTime+t0+dur);
-            g.gain.setValueAtTime(0.0001,c.currentTime+t0);
-            g.gain.exponentialRampToValueAtTime(g0,c.currentTime+t0+0.012);
-            g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+t0+dur);
-            o.connect(g);g.connect(c.destination);
-            o.start(c.currentTime+t0);o.stop(c.currentTime+t0+dur+0.02);
-          }
-          chirp(520,780,0,0.1,0.16);
-          chirp(780,1175,0.14,0.12,0.16);
+          const o=c.createOscillator(), g=c.createGain();
+          o.type='sine';
+          o.frequency.setValueAtTime(1320, c.currentTime);
+          g.gain.setValueAtTime(0.0001, c.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.2, c.currentTime+0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+0.16);
+          o.connect(g); g.connect(c.destination);
+          o.start(); o.stop(c.currentTime+0.18);
         """,
         "team": """
           const c=new (window.AudioContext||window.webkitAudioContext)();
-          function tone(f,t0,dur,type,g0){
-            const o=c.createOscillator(),g=c.createGain();
-            o.type=type;o.frequency.value=f;
-            g.gain.setValueAtTime(0.0001,c.currentTime+t0);
-            g.gain.exponentialRampToValueAtTime(g0,c.currentTime+t0+0.01);
-            g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+t0+dur);
-            o.connect(g);g.connect(c.destination);
-            o.start(c.currentTime+t0);o.stop(c.currentTime+t0+dur+0.02);
+          function note(f,t0,dur,gain){
+            const o=c.createOscillator(), g=c.createGain();
+            o.type='triangle'; o.frequency.value=f;
+            g.gain.setValueAtTime(0.0001, c.currentTime+t0);
+            g.gain.exponentialRampToValueAtTime(gain, c.currentTime+t0+0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+t0+dur);
+            o.connect(g); g.connect(c.destination);
+            o.start(c.currentTime+t0); o.stop(c.currentTime+t0+dur+0.02);
           }
-          tone(1760,0.01,0.18,'square',0.17);
-          tone(2349,0.06,0.14,'sine',0.11);
-          tone(2637,0.1,0.1,'triangle',0.08);
+          note(523, 0, 0.2, 0.2);
+          note(784, 0.22, 0.28, 0.18);
         """,
         "finish": """
           const c=new (window.AudioContext||window.webkitAudioContext)();
-          function tone(f,t0,dur,type,g0,f2){
-            const o=c.createOscillator(),g=c.createGain();
+          function note(f,t0,dur,type,gain,f2){
+            const o=c.createOscillator(), g=c.createGain();
             o.type=type;
-            o.frequency.setValueAtTime(f,c.currentTime+t0);
-            if(f2) o.frequency.exponentialRampToValueAtTime(f2,c.currentTime+t0+dur);
-            g.gain.setValueAtTime(0.0001,c.currentTime+t0);
-            g.gain.exponentialRampToValueAtTime(g0,c.currentTime+t0+0.015);
-            g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+t0+dur);
-            o.connect(g);g.connect(c.destination);
-            o.start(c.currentTime+t0);o.stop(c.currentTime+t0+dur+0.03);
+            o.frequency.setValueAtTime(f, c.currentTime+t0);
+            if(f2) o.frequency.exponentialRampToValueAtTime(f2, c.currentTime+t0+dur*0.9);
+            g.gain.setValueAtTime(0.0001, c.currentTime+t0);
+            g.gain.exponentialRampToValueAtTime(gain, c.currentTime+t0+0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+t0+dur);
+            o.connect(g); g.connect(c.destination);
+            o.start(c.currentTime+t0); o.stop(c.currentTime+t0+dur+0.03);
           }
-          tone(220,0,0.32,'sawtooth',0.18,880);
-          tone(988,0.38,0.12,'square',0.18);
-          tone(1319,0.52,0.14,'square',0.18);
-          tone(523,0.7,0.4,'triangle',0.14);
-          tone(659,0.7,0.4,'triangle',0.12);
-          tone(784,0.7,0.45,'sine',0.14);
+          note(200, 0, 0.35, 'sawtooth', 0.16, 700);
+          note(523, 0.4, 0.25, 'square', 0.17);
+          note(659, 0.6, 0.25, 'square', 0.16);
+          note(784, 0.8, 0.45, 'triangle', 0.18);
+          note(1047, 0.85, 0.4, 'sine', 0.12);
         """,
     }
     js = scripts.get(kind, "")
     if not js.strip():
         return
-    # key unik supaya Streamlit tidak men-cache iframe & memutar ulang suara lama
+    if announce:
+        labels = {
+            "zone": "Zona selesai",
+            "team": "Tim selesai (semua zona Lt.1–3)",
+            "finish": "Proyek selesai",
+        }
+        try:
+            st.toast("🔊 " + labels.get(kind, kind))
+        except Exception:
+            pass
     components.html(
-        "<script>(function(){try{"
-        + js
-        + "}catch(e){}})();</script>",
+        "<script>(function(){try{" + js + "}catch(e){}})();</script>",
         height=0,
         width=0,
     )
 
 
 def sfx_from_transition(prev, nxt) -> None:
-    """Putar suara sesuai prioritas: proyek > tim > zona (sama seperti sandbox)."""
+    """Satu suara per hari, prioritas: proyek > tim > zona."""
     if prev is None or nxt is None:
         return
     if not prev.finished and nxt.finished:
@@ -305,9 +306,7 @@ def sfx_from_transition(prev, nxt) -> None:
     if done_after > done_before:
         play_sfx("team")
         return
-    prog_before = sum(t.progress for t in prev.teams)
-    prog_after = sum(t.progress for t in nxt.teams)
-    if prog_after > prog_before:
+    if sum(t.progress for t in nxt.teams) > sum(t.progress for t in prev.teams):
         play_sfx("zone")
 
 
@@ -1043,7 +1042,7 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
         st.session_state.sim_state = create_initial_state(cfg)
         st.session_state.running = True
         st.session_state["_sfx_done"] = False
-        play_sfx("zone")  # unlock audio + contoh suara zona
+        play_sfx("zone", announce=False)  # unlock audio
         st.rerun()
 
     if pause_clicked:
