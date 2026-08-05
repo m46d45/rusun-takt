@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-"""Rusun Takt — Streamlit Community Cloud entrypoint."""
+"""Rusun Takt — Streamlit (minimal deps for fast Cloud install)."""
 from __future__ import annotations
 
+import base64
 import traceback
 from pathlib import Path
 
-import pandas as pd
 import streamlit as st
 
 from rusun_takt_engine import (
@@ -40,7 +40,6 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# Cerah & semangat
 st.markdown(
     """
 <style>
@@ -51,84 +50,35 @@ st.markdown(
     background: linear-gradient(180deg, #ffffff 0%, #e0f2fe 100%);
     border-right: 1px solid #bae6fd;
   }
-  [data-testid="stSidebar"] * {
-    color: #0f172a;
-  }
   .block-container { padding-top: 1rem; max-width: 1100px; }
-  div[data-testid="stMetricValue"] {
-    font-variant-numeric: tabular-nums;
-    color: #0369a1 !important;
-  }
-  div[data-testid="stMetricLabel"] { color: #475569 !important; }
   .hero {
-    display: flex;
-    align-items: center;
-    gap: 1.1rem;
-    background: #ffffff;
-    border: 2px solid #7dd3fc;
-    border-radius: 18px;
-    padding: 1rem 1.25rem;
-    box-shadow: 0 8px 24px rgba(14, 165, 233, 0.12);
-    margin-bottom: 0.75rem;
+    display: flex; align-items: center; gap: 1.1rem;
+    background: #ffffff; border: 2px solid #7dd3fc; border-radius: 18px;
+    padding: 1rem 1.25rem; box-shadow: 0 8px 24px rgba(14,165,233,.12);
+    margin-bottom: .75rem;
   }
   .hero img {
-    width: 88px;
-    height: 88px;
-    border-radius: 16px;
-    object-fit: cover;
-    border: 2px solid #fde68a;
-    background: #fff;
+    width: 88px; height: 88px; border-radius: 16px; object-fit: cover;
+    border: 2px solid #fde68a; background: #fff;
   }
-  .hero h1 {
-    margin: 0;
-    font-size: 1.85rem;
-    color: #0c4a6e;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-  }
-  .hero p {
-    margin: 0.25rem 0 0;
-    color: #475569;
-    font-size: 0.98rem;
-    line-height: 1.4;
-  }
-  .badge-row { margin-top: 0.45rem; display: flex; flex-wrap: wrap; gap: 0.35rem; }
+  .hero h1 { margin: 0; font-size: 1.85rem; color: #0c4a6e; font-weight: 800; }
+  .hero p { margin: .25rem 0 0; color: #475569; font-size: .98rem; }
+  .badge-row { margin-top: .45rem; display: flex; flex-wrap: wrap; gap: .35rem; }
   .badge {
-    display: inline-block;
-    background: #fef3c7;
-    color: #92400e;
-    border: 1px solid #fcd34d;
-    border-radius: 999px;
-    padding: 0.15rem 0.55rem;
-    font-size: 0.75rem;
-    font-weight: 600;
+    display: inline-block; border-radius: 999px; padding: .15rem .55rem;
+    font-size: .75rem; font-weight: 600; border: 1px solid #fcd34d;
+    background: #fef3c7; color: #92400e;
   }
   .badge.blue { background: #e0f2fe; color: #075985; border-color: #7dd3fc; }
   .badge.green { background: #dcfce7; color: #166534; border-color: #86efac; }
   .card {
-    background: #ffffff;
-    border: 1px solid #bae6fd;
-    border-radius: 14px;
-    padding: 0.9rem 1rem;
-    margin: 0.6rem 0 1rem;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+    background: #fff; border: 1px solid #bae6fd; border-radius: 14px;
+    padding: .9rem 1rem; margin: .6rem 0 1rem;
   }
   h2, h3 { color: #0c4a6e !important; }
-  .stButton > button[kind="primary"] {
-    background: linear-gradient(90deg, #0284c7, #0ea5e9) !important;
-    border: none !important;
-    color: white !important;
-    font-weight: 700 !important;
-    border-radius: 12px !important;
-  }
   .zone-tile {
-    border-radius: 12px;
-    padding: 12px 8px;
-    text-align: center;
-    color: #fff;
-    min-height: 68px;
-    font-weight: 700;
-    box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+    border-radius: 12px; padding: 12px 8px; text-align: center; color: #fff;
+    min-height: 68px; font-weight: 700; box-shadow: 0 3px 10px rgba(0,0,0,.12);
   }
 </style>
 """,
@@ -148,16 +98,12 @@ def start_label(sw: int) -> str:
 
 
 def hero() -> None:
-    logo_b64 = ""
+    img_html = ""
     if LOGO.exists():
-        import base64
-
-        logo_b64 = base64.b64encode(LOGO.read_bytes()).decode("ascii")
-    img_html = (
-        '<img src="data:image/png;base64,{}" alt="Logo Rusun Takt" />'.format(logo_b64)
-        if logo_b64
-        else ""
-    )
+        b64 = base64.b64encode(LOGO.read_bytes()).decode("ascii")
+        img_html = '<img src="data:image/png;base64,{}" alt="Logo Rusun Takt" />'.format(
+            b64
+        )
     st.markdown(
         """
 <div class="hero">
@@ -183,7 +129,7 @@ def hero() -> None:
 def main() -> None:
     hero()
 
-    with st.expander("📖 Manual singkat", expanded=False):
+    with st.expander("Manual singkat", expanded=False):
         st.markdown(
             """
 1. **Wagon** berurutan: Struktur → Pelat → Dinding → MEP → Plester → Keramik → Cat
@@ -242,18 +188,10 @@ def main() -> None:
                 )
                 c1, c2 = st.columns(2)
                 lo = c1.number_input(
-                    "Min hari",
-                    min_value=1,
-                    max_value=9,
-                    value=int(default_lo),
-                    key="lo_{}".format(i),
+                    "Min hari", 1, 9, int(default_lo), key="lo_{}".format(i)
                 )
                 hi = c2.number_input(
-                    "Max hari",
-                    min_value=1,
-                    max_value=9,
-                    value=int(default_hi),
-                    key="hi_{}".format(i),
+                    "Max hari", 1, 9, int(default_hi), key="hi_{}".format(i)
                 )
                 cost_ui = st.number_input(
                     "Biaya/hari (× Rp1.000)",
@@ -271,7 +209,7 @@ def main() -> None:
                     )
                 )
 
-        run_btn = st.button("▶ Jalankan simulasi", type="primary", use_container_width=True)
+        run_btn = st.button("Jalankan simulasi", type="primary", use_container_width=True)
 
     if run_btn:
         cfg = SimConfig(
@@ -288,8 +226,8 @@ def main() -> None:
             """
 <div class="card">
   <strong>Mulai di sini</strong><br/>
-  Atur setup di sidebar kiri, pilih preset <em>Push</em> atau <em>JIT</em>,
-  lalu klik <strong>Jalankan simulasi</strong>. Bandingkan waste & margin-nya!
+  Atur setup di sidebar, pilih preset <em>Push</em> atau <em>JIT</em>,
+  lalu klik <strong>Jalankan simulasi</strong>.
 </div>
 """,
             unsafe_allow_html=True,
@@ -320,37 +258,48 @@ def main() -> None:
     k5.metric("Margin", fmt_rp(fin["margin"]), "{:.1f}%".format(fin["margin_pct"]))
 
     st.subheader("Hasil per tim")
-    rows = []
+    header = [
+        "Tim",
+        "Start",
+        "Variasi",
+        "Minggu selesai",
+        "Hari kerja",
+        "Tak terpakai",
+        "Maks",
+        "Min",
+        "Rata-rata",
+        "Waste (Rp)",
+    ]
+    body = []
     for i, t in enumerate(final.teams):
         durs = t.zone_durations or [0]
-        rows.append(
-            {
-                "Tim": TEAMS[i]["short"],
-                "Start": start_label(final.config.teams[i].start_week),
-                "Variasi": "{}–{}".format(
+        body.append(
+            [
+                TEAMS[i]["short"],
+                start_label(final.config.teams[i].start_week),
+                "{}–{}".format(
                     final.config.teams[i].dice_min, final.config.teams[i].dice_max
                 ),
-                "Minggu selesai": day_to_week(t.finish_day) if t.finish_day else "—",
-                "Total hari kerja": t.capacity_total,
-                "Tak terpakai": t.unused_capacity,
-                "Maks": max(durs) if durs else 0,
-                "Min": min(durs) if durs else 0,
-                "Rata-rata": round(sum(durs) / len(durs), 1) if durs else 0,
-                "Waste (Rp)": int(t.waste_cost),
-            }
+                day_to_week(t.finish_day) if t.finish_day else "—",
+                t.capacity_total,
+                t.unused_capacity,
+                max(durs) if durs else 0,
+                min(durs) if durs else 0,
+                round(sum(durs) / len(durs), 1) if durs else 0,
+                int(t.waste_cost),
+            ]
         )
-    st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+    st.table([header] + body)
 
     st.subheader("Progress wagon (zona selesai / {})".format(TOTAL_UNITS))
-    prog = pd.DataFrame(
-        {"Zona selesai": [t.progress for t in final.teams]},
-        index=[t["short"] for t in TEAMS],
-    )
-    st.bar_chart(prog, color="#0ea5e9")
+    chart_data = {
+        TEAMS[i]["short"]: t.progress for i, t in enumerate(final.teams)
+    }
+    st.bar_chart(chart_data, horizontal=True, color="#0ea5e9")
 
     st.subheader("Takt plan (minggu)")
     st.caption(
-        "1 minggu = {} hari. Sel berisi nama tim. Kosong = idle/curing.".format(
+        "1 minggu = {} hari. Sel = nama tim. Kosong = idle/curing.".format(
             DAYS_PER_WEEK
         )
     )
@@ -360,12 +309,9 @@ def main() -> None:
         for f in range(FLOORS)
         for zi in range(UNITS_PER_FLOOR)
     ]
-    takt_df = pd.DataFrame(
-        work,
-        index=zone_names,
-        columns=["M{}".format(w + 1) for w in range(weeks)],
-    )
-    st.dataframe(takt_df, use_container_width=True)
+    takt_header = ["Zona"] + ["M{}".format(w + 1) for w in range(weeks)]
+    takt_body = [[zone_names[z]] + work[z] for z in range(TOTAL_UNITS)]
+    st.table([takt_header] + takt_body)
 
     st.subheader("Ilustrasi zona")
     last_progress = final.teams[-1].progress
