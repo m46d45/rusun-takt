@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #0c0c0e;
-  --color-surface: #141418;
-  --color-surface-2: #1c1c22;
-  --color-surface-3: #25252d;
-  --color-fg: #f0f0f2;
-  --color-muted: #9b9ba8;
-  --color-subtle: #6b6b78;
-  --color-border: #2a2a34;
-  --color-border-strong: #3a3a48;
-  --color-accent: #e8eaed;
-  --color-accent-fg: #0c0c0e;
-  --color-ok: #4ade80;
-  --color-warn: #facc15;
-  --color-danger: #f87171;
-  --color-info: #38bdf8;
+  --color-bg: #e0f2fe;
+  --color-surface: #ffffff;
+  --color-surface-2: #f0f9ff;
+  --color-surface-3: #e0f2fe;
+  --color-fg: #0f172a;
+  --color-muted: #475569;
+  --color-subtle: #64748b;
+  --color-border: #bae6fd;
+  --color-border-strong: #7dd3fc;
+  --color-accent: #0284c7;
+  --color-accent-fg: #ffffff;
+  --color-ok: #16a34a;
+  --color-warn: #d97706;
+  --color-danger: #dc2626;
+  --color-info: #0284c7;
 
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
     "Helvetica Neue", Arial, sans-serif;
@@ -35,13 +35,16 @@
   }
 
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
 
   body {
     margin: 0;
     min-height: 100dvh;
-    background: var(--color-bg);
+    background:
+      radial-gradient(1200px 600px at 10% -10%, #fef3c7 0%, transparent 55%),
+      radial-gradient(900px 500px at 100% 0%, #bae6fd 0%, transparent 50%),
+      linear-gradient(165deg, #e0f2fe 0%, #f0f9ff 45%, #fff7ed 100%);
     color: var(--color-fg);
     font-family: var(--font-sans);
     font-size: 1rem;
@@ -66,7 +69,7 @@
 
   .font-display {
     font-family: var(--font-display);
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: -0.02em;
   }
 }

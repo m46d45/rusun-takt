@@ -164,7 +164,7 @@ export function ResultsChart({ state }: { state: SimSnapshot }) {
       <div className="overflow-x-auto">
         <table className="w-full min-w-[48rem] border-collapse text-left text-sm">
           <thead>
-            <tr className="bg-zinc-900 text-[10px] uppercase tracking-wide text-zinc-200">
+            <tr className="bg-sky-800 text-[10px] uppercase tracking-wide text-sky-50">
               <th className="px-2 py-2 font-semibold">Tim (wagon)</th>
               <th className="px-2 py-2 text-center font-semibold">
                 Minggu selesai
@@ -231,13 +231,13 @@ export function ResultsChart({ state }: { state: SimSnapshot }) {
                 </td>
               </tr>
             ))}
-            <tr className="bg-zinc-900 text-zinc-50">
+            <tr className="bg-sky-900 text-sky-50">
               <td className="px-2 py-2.5 font-bold uppercase">Total</td>
               <td className="px-2 py-2.5 text-center">—</td>
               <td className="tabular px-2 py-2.5 text-center text-lg font-bold">
                 {formatNumber(totalCap)}
               </td>
-              <td className="tabular px-2 py-2.5 text-center text-lg font-bold text-red-300">
+              <td className="tabular px-2 py-2.5 text-center text-lg font-bold text-red-200">
                 {formatNumber(totalUnused)}
               </td>
               <td className="px-2 py-2.5 text-center">—</td>
