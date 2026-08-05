@@ -700,12 +700,16 @@ def collect_setup():
     )
     h3.markdown(
         '<p style="margin:0;font-size:.65rem;font-weight:700;color:#64748b;'
-        'text-transform:uppercase;letter-spacing:.03em">Bawah</p>',
+        'text-transform:uppercase;letter-spacing:.03em">'
+        'Kapasitas<br/><span style="font-weight:600;text-transform:none;'
+        'color:#0c4a6e">Bawah (hari)</span></p>',
         unsafe_allow_html=True,
     )
     h4.markdown(
         '<p style="margin:0;font-size:.65rem;font-weight:700;color:#64748b;'
-        'text-transform:uppercase;letter-spacing:.03em">Atas</p>',
+        'text-transform:uppercase;letter-spacing:.03em">'
+        'Kapasitas<br/><span style="font-weight:600;text-transform:none;'
+        'color:#0c4a6e">Atas (hari)</span></p>',
         unsafe_allow_html=True,
     )
     h5.markdown(
@@ -714,6 +718,10 @@ def collect_setup():
         '<br/><span style="font-weight:500;text-transform:none">'
         '(× Rp1.000)</span></p>',
         unsafe_allow_html=True,
+    )
+    st.caption(
+        "Variasi kapasitas = hari kerja per zona. Bawah–atas acak (mis. 1–6); "
+        "sama (mis. 7–7) = konstan."
     )
     for i, defn in enumerate(TEAMS):
         a, b, c, d, e = st.columns(col_ratios)
@@ -791,12 +799,65 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    with st.expander("📖 Manual", expanded=False):
+    with st.expander("📖 Baca manual lengkap (sebelum simulasi)", expanded=False):
         st.markdown(
-            "- Push vs JIT · variasi kapasitas · waste tetap dibayar\n"
-            "- Penalti = terlambat × 1/1000 × kontrak\n"
-            "- Margin = kontrak − tenaga − penalti\n"
-            "- **1 minggu = {} hari**".format(DAYS_PER_WEEK)
+            """
+### Apa ini?
+Simulasi pendidikan **lean construction** untuk rusun 3 lantai. Anda melihat
+dampak **push** (kirim tim lebih awal), **JIT** (Just-in-Time), variasi kapasitas,
+waste menunggu, penalti owner, dan margin — seperti Takt Towers, konteks Indonesia.
+
+### Bangunan & zonasi
+- 3 lantai walk-up (tangga, tanpa lift)
+- Per lantai 5 zona: **{zones}** (tangga di tengah)
+- Fondasi & sloof dianggap sudah ada
+
+### Tujuh tim (wagon)
+1. **Struktur** — kolom & balok
+2. **Pelat** & tangga
+3. **Dinding** & pasangan
+4. **MEP**
+5. **Plester** & acian
+6. **Keramik** & plafon
+7. **Cat** (pengecatan)
+
+Parade of trades: urutan tetap. **Satu zona = satu tim**. Tim berikutnya baru
+masuk setelah wagon depan meninggalkan zona (paling cepat hari berikutnya).
+
+### Curing ({curing} hari)
+Setelah **Pelat** selesai di suatu zona, zona itu di-curing {curing} hari penuh.
+Tim Dinding (dan setelahnya) baru boleh masuk setelah curing. Struktur ke lantai
+atas menunggu curing zona di bawahnya. Di takt plan, minggu curing biasanya **putih (kosong)**.
+
+### Setup
+- **Start Kerja** — Minggu 1–7 (push: sudah dibayar meski menunggu) atau **JIT**
+  (baru mulai & dibayar saat zona siap)
+- **Variasi kapasitas** — batas **bawah–atas** hari per zona
+  (contoh 1–6 acak; **7–7** = konstan 7 hari)
+- **Biaya / hari** — default 350 (× Rp1.000 = Rp350.000)
+- **Durasi owner** default 120 hari; **kontrak** default 210 juta
+- **Penalti** = hari terlambat × (1/1000) × kontrak
+- **Margin** = kontrak − biaya tenaga − penalti
+
+### Waktu
+Simulasi per **hari**. Takt plan diagregasi per minggu:
+**1 minggu = {week} hari** (M1 = hari 1–7, M2 = hari 8–14, …).
+
+### Kontrol
+- **Start** — animasi hari-per-hari
+- **Jeda** / **1 hari** / **Selesaikan**
+- **Kecepatan** — Lambat (1 dtk) · Normal · Cepat · Instan
+
+### Membaca hasil
+- **Waste** = tim di site tapi menunggu (tetap dibayar) — ★ = waste tertinggi
+- **Waste %** = waste / biaya tim
+- Helm di ilustrasi = wagon yang aktif di zona
+- Takt plan: sel berwarna = kerja; putih = idle/curing
+            """.format(
+                zones=" · ".join(ZONE_LABELS),
+                curing=CURING_DAYS,
+                week=DAYS_PER_WEEK,
+            )
         )
 
     st.markdown(
