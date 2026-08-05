@@ -293,14 +293,18 @@ export function Simulator() {
           </p>
           <p>
             <span className="font-semibold text-fg">
-              6. Biaya = tenaga kerja saja.
+              6. Biaya = tenaga kerja di site saja.
             </span>{" "}
             Nilai kontrak di simulasi ={" "}
             <strong className="text-fg">porsi tenaga kerja</strong> (bukan total
-            kontrak bangunan). Material & alat diasumsikan dari{" "}
-            <strong className="text-fg">kontraktor utama</strong> dan{" "}
-            <strong className="text-fg">tidak menjadi kendala</strong> (selalu
-            tersedia, tidak dihitung di sini).
+            kontrak bangunan). Yang dihitung: upah saat tim di site (termasuk
+            menunggu = waste).{" "}
+            <strong className="text-fg">Mob/demob perorangan</strong>, headcount
+            regu, serta <strong className="text-fg">material & alat</strong>{" "}
+            dari kontraktor utama{" "}
+            <strong className="text-fg">tidak dimodelkan</strong> — tidak
+            menjadi kendala dan tidak dihitung. Fokus pembelajaran: aliran takt
+            & waste menunggu antar trade, bukan optimasi jumlah orang.
           </p>
           {started && state.day > 0 ? (
             <p className="tabular text-xs text-subtle">
@@ -384,10 +388,11 @@ export function Simulator() {
                 </span>
               </label>
               <p className="text-[11px] text-subtle sm:col-span-2">
-                Biaya = tenaga kerja saja. Kontrak = porsi tenaga (bukan total
-                bangunan). Material & alat dari kontraktor utama — selalu
-                tersedia, tidak dihitung. Penalti = terlambat × (1/1000) ×
-                kontrak tenaga. Margin = kontrak − biaya tenaga − penalti.
+                Biaya = tenaga di site saja (termasuk menunggu). Kontrak = porsi
+                tenaga. Mob/demob perorangan, headcount, material & alat dari
+                kontraktor utama — di luar model, bukan kendala. Penalti =
+                terlambat × (1/1000) × kontrak tenaga. Margin = kontrak − biaya
+                tenaga − penalti.
               </p>
             </div>
 

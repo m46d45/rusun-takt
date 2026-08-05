@@ -100,9 +100,9 @@ export function MetricsPanel({
           />
         </div>
         <p className="mt-3 text-[10px] leading-relaxed text-subtle">
-          Biaya & kontrak di sini = tenaga kerja saja. Material dari kontraktor
-          utama (bukan kendala, tidak dihitung). Penalti = terlambat × (1/1000)
-          × kontrak tenaga. Margin = kontrak − biaya tenaga − penalti.
+          Biaya & kontrak = tenaga di site saja. Mob/demob perorangan, headcount,
+          material (kontraktor utama) di luar model. Penalti = terlambat ×
+          (1/1000) × kontrak tenaga. Margin = kontrak − biaya tenaga − penalti.
         </p>
       </div>
     </div>

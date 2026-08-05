@@ -420,7 +420,7 @@ def finance_html(state) -> str:
     <div class="fin-card {live}"><div class="lbl">Margin tenaga</div>
       <div class="val sm {margin_cls}">{margin}<br/><span class="tiny">{mpct}%</span></div></div>
   </div>
-  <p class="tiny" style="margin-top:8px">Kontrak di sini = porsi tenaga kerja. Material dari kontraktor utama (tidak dihitung). Penalti = terlambat × (1/1000) × kontrak tenaga. Margin = kontrak − tenaga − penalti.</p>
+  <p class="tiny" style="margin-top:8px">Kontrak = porsi tenaga. Mob/demob perorangan & material (kontraktor utama) di luar model. Penalti = terlambat × (1/1000) × kontrak tenaga. Margin = kontrak − tenaga − penalti.</p>
 </div>
 """.format(
         live_badge='<span class="badge blue">live</span>' if live else "",
@@ -707,9 +707,9 @@ def collect_setup():
         seed = st.number_input("Seed acak", min_value=0, value=42)
 
     st.caption(
-        "Biaya = tenaga kerja saja · kontrak = porsi tenaga · material dari kontraktor utama "
-        "(bukan kendala). Penalti = terlambat × (1/1000) × kontrak tenaga. "
-        "Default 210 jt · 120 hari."
+        "Biaya = tenaga di site (termasuk menunggu). Kontrak = porsi tenaga. "
+        "Mob/demob perorangan, headcount, material dari kontraktor utama — di luar model. "
+        "Penalti = terlambat × (1/1000) × kontrak. Default 210 jt · 120 hari."
     )
 
     p1, p2 = st.columns([2, 1.2])
@@ -847,7 +847,7 @@ def main() -> None:
   <p><strong>3. Alur zona.</strong> U1 → U2 → Tangga → U3 → U4, naik lantai.</p>
   <p><strong>4. Curing {c} hari</strong> setelah Pelat selesai per zona.</p>
   <p><strong>5. Start Kerja.</strong> Minggu 1–7 = push. JIT = masuk tepat waktu.</p>
-  <p><strong>6. Biaya = tenaga kerja saja.</strong> Nilai kontrak di sini = <strong>porsi tenaga kerja</strong> (bukan total kontrak bangunan). Material & alat diasumsikan dari <strong>kontraktor utama</strong> dan <strong>tidak menjadi kendala</strong> (selalu tersedia, tidak dihitung di simulasi).</p>
+  <p><strong>6. Biaya = tenaga kerja di site saja.</strong> Nilai kontrak di sini = <strong>porsi tenaga kerja</strong> (bukan total kontrak bangunan). Yang dihitung: upah saat tim di site (termasuk menunggu = waste). <strong>Mob/demob perorangan</strong>, headcount regu, serta <strong>material & alat</strong> diasumsikan dari <strong>kontraktor utama</strong> — <strong>tidak dimodelkan</strong>, tidak menjadi kendala, dan tidak dihitung (fokus pembelajaran = aliran takt & waste menunggu antar trade).</p>
 </div>
 """.format(z=" · ".join(ZONE_LABELS), c=CURING_DAYS),
         unsafe_allow_html=True,
@@ -891,7 +891,9 @@ atas menunggu curing zona di bawahnya. Di takt plan, minggu curing biasanya **pu
 - **Biaya / hari** — default 350 (× Rp1.000 = Rp350.000)
 - **Durasi proyek rusun** default 120 hari (target selesai; penalti jika lewat)
 - **Nilai kontrak** = **porsi tenaga kerja** saja (default 210 juta), bukan total bangunan
-- **Material & alat** dari kontraktor utama — selalu tersedia, **bukan kendala**, tidak dihitung biaya di sini
+- **Yang dihitung:** upah tenaga saat di site (termasuk menunggu = waste)
+- **Di luar model:** mob/demob perorangan, jumlah orang per regu, material & alat (kontraktor utama — bukan kendala)
+- Fokus: aliran takt & waste menunggu antar trade — bukan optimasi headcount
 - **Penalti** = hari terlambat × (1/1000) × kontrak tenaga
 - **Margin** = kontrak tenaga − biaya tenaga − penalti
 

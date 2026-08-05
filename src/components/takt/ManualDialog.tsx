@@ -133,10 +133,16 @@ export function ManualDialog({
                 kerja default 210 juta (bukan total bangunan).
               </li>
               <li>
-                <strong className="text-fg">Material & alat</strong> dari
-                kontraktor utama — selalu tersedia,{" "}
-                <strong className="text-fg">tidak menjadi kendala</strong>,
-                tidak dihitung di simulasi.
+                <strong className="text-fg">Yang dihitung:</strong> upah tenaga
+                saat di site (termasuk menunggu = waste).
+              </li>
+              <li>
+                <strong className="text-fg">Di luar model:</strong>{" "}
+                mob/demob perorangan, jumlah orang per regu, material & alat.
+                Material & alat dari kontraktor utama — selalu tersedia,{" "}
+                <strong className="text-fg">tidak menjadi kendala</strong>.
+                Fokus pembelajaran = aliran takt & waste menunggu, bukan
+                optimasi headcount.
               </li>
               <li>
                 Penalti = hari terlambat × (1/1000) × kontrak tenaga. Margin =
