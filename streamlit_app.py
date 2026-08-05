@@ -369,8 +369,18 @@ def main() -> None:
     st.markdown(md)
 
     st.subheader("Progress wagon (zona selesai / {})".format(TOTAL_UNITS))
-    chart_data = {TEAMS[i]["short"]: t.progress for i, t in enumerate(final.teams)}
-    st.bar_chart(chart_data)
+    for i, t in enumerate(final.teams):
+        pct = min(100, int(round(100 * t.progress / TOTAL_UNITS))) if TOTAL_UNITS else 0
+        c1, c2 = st.columns([1.2, 4])
+        with c1:
+            st.markdown(
+                '<span class="team-dot" style="background:{c}">{n}</span> **{name}**'.format(
+                    c=TEAMS[i]["color"], n=i + 1, name=TEAMS[i]["short"]
+                ),
+                unsafe_allow_html=True,
+            )
+        with c2:
+            st.progress(pct / 100.0, text="{} / {} zona".format(t.progress, TOTAL_UNITS))
 
     st.subheader("Takt plan (minggu)")
     st.caption(
