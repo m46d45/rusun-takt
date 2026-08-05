@@ -848,7 +848,6 @@ def main() -> None:
   <p><strong>4. Curing {c} hari</strong> setelah Pelat selesai per zona.</p>
   <p><strong>5. Start Kerja.</strong> Minggu 1–7 = push. JIT = masuk tepat waktu.</p>
   <p><strong>6. Biaya = tenaga kerja saja.</strong> Nilai kontrak di sini = <strong>porsi tenaga kerja</strong> (bukan total kontrak bangunan). Material & alat diasumsikan dari <strong>kontraktor utama</strong> dan <strong>tidak menjadi kendala</strong> (selalu tersedia, tidak dihitung di simulasi).</p>
-  <p><strong>7. Durasi proyek rusun.</strong> Target waktu penyelesaian proyek (dulu disebut “durasi owner”) — dipakai menghitung penalti keterlambatan.</p>
 </div>
 """.format(z=" · ".join(ZONE_LABELS), c=CURING_DAYS),
         unsafe_allow_html=True,

@@ -302,13 +302,6 @@ export function Simulator() {
             <strong className="text-fg">tidak menjadi kendala</strong> (selalu
             tersedia, tidak dihitung di sini).
           </p>
-          <p>
-            <span className="font-semibold text-fg">
-              7. Durasi proyek rusun.
-            </span>{" "}
-            Target waktu penyelesaian proyek — dipakai menghitung penalti
-            keterlambatan (hari lewat target × 1/1000 × kontrak tenaga).
-          </p>
           {started && state.day > 0 ? (
             <p className="tabular text-xs text-subtle">
               Berjalan: Minggu {weekNow} · hari {state.day}
