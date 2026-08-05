@@ -649,7 +649,7 @@ export function Simulator() {
             Reset
           </Button>
           <label className="flex w-full items-center gap-2 text-xs text-muted sm:ml-auto sm:w-auto">
-            Kecepatan
+            Kecepatan simulasi
             <select
               value={speedMs}
               onChange={(e) => setSpeedMs(Number(e.target.value))}

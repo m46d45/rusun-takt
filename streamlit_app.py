@@ -787,7 +787,7 @@ def collect_setup():
         )
     with p2:
         speed_label = st.select_slider(
-            "Kecepatan",
+            "Kecepatan simulasi",
             options=list(SPEED_MS.keys()),
             value="Normal · 0,5 dtk",
         )
@@ -966,10 +966,10 @@ atas menunggu curing zona di bawahnya. Di takt plan, minggu curing biasanya **pu
 Simulasi per **hari**. Takt plan diagregasi per minggu:
 **1 minggu = {week} hari** (M1 = hari 1–7, M2 = hari 8–14, …).
 
-### Kontrol
+### Kontrol simulasi
 - **Start** — animasi hari-per-hari
 - **Jeda** / **1 hari** / **Selesaikan**
-- **Kecepatan** — Lambat (1 dtk) · Normal · Cepat · Instan
+- **Kecepatan simulasi** — Lambat (1 dtk) · Normal · Cepat · Instan
 - **Suara (3 event, beda jelas):**
   1. **Ding** — **zona selesai** = cek hijau (wagon **Cat / tim 7** lepas zona itu), bukan tiap wagon
   2. **Do–mi** — satu tim selesai semua zona (Lt.1–3)
