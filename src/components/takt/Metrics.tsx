@@ -38,7 +38,7 @@ export function MetricsPanel({
             }
           />
           <Stat
-            label="Durasi owner"
+            label="Durasi proyek rusun"
             value={`${finance.ownerDurationDays} hari`}
           />
           <Stat label="Biaya tenaga" value={formatRp(metrics.totalCost)} />
@@ -68,7 +68,7 @@ export function MetricsPanel({
           ) : null}
         </div>
         <div className="mt-3 space-y-3">
-          <Stat label="Nilai kontrak" value={formatRp(finance.contractValue)} />
+          <Stat label="Kontrak (porsi tenaga)" value={formatRp(finance.contractValue)} />
           <Stat
             label={
               finance.lateDays > 0
@@ -100,8 +100,9 @@ export function MetricsPanel({
           />
         </div>
         <p className="mt-3 text-[10px] leading-relaxed text-subtle">
-          Penalti = hari terlambat × (1/1000) × kontrak. Margin = kontrak −
-          biaya tenaga − penalti. Update tiap hari simulasi.
+          Biaya & kontrak di sini = tenaga kerja saja. Material dari kontraktor
+          utama (bukan kendala, tidak dihitung). Penalti = terlambat × (1/1000)
+          × kontrak tenaga. Margin = kontrak − biaya tenaga − penalti.
         </p>
       </div>
     </div>

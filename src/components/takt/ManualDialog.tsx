@@ -127,13 +127,20 @@ export function ManualDialog({
                 (× Rp1.000 = Rp350.000).
               </li>
               <li>
-                <strong className="text-fg">Durasi owner</strong> default 120
-                hari; <strong className="text-fg">kontrak</strong> default 210
-                juta.
+                <strong className="text-fg">Durasi proyek rusun</strong> default
+                120 hari (target selesai);{" "}
+                <strong className="text-fg">kontrak</strong> = porsi tenaga
+                kerja default 210 juta (bukan total bangunan).
               </li>
               <li>
-                Penalti = hari terlambat × (1/1000) × kontrak. Margin = kontrak −
-                biaya tenaga − penalti.
+                <strong className="text-fg">Material & alat</strong> dari
+                kontraktor utama — selalu tersedia,{" "}
+                <strong className="text-fg">tidak menjadi kendala</strong>,
+                tidak dihitung di simulasi.
+              </li>
+              <li>
+                Penalti = hari terlambat × (1/1000) × kontrak tenaga. Margin =
+                kontrak tenaga − biaya tenaga − penalti.
               </li>
             </ul>
           </section>

@@ -8,6 +8,7 @@ import traceback
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 from rusun_takt_engine import (
     TEAMS,
@@ -218,7 +219,44 @@ def fmt_rp(n: float) -> str:
         return str(n)
 
 
+
+def play_sfx(kind: str = "finish") -> None:
+    """Suara mesin singkat via Web Audio (butuh interaksi user sebelumnya, mis. Start)."""
+    js = {
+        "zone": """
+          const c=new (window.AudioContext||window.webkitAudioContext)();
+          const o=c.createOscillator(),g=c.createGain();
+          o.type='square';o.frequency.setValueAtTime(520,c.currentTime);
+          o.frequency.exponentialRampToValueAtTime(1175,c.currentTime+0.12);
+          g.gain.setValueAtTime(0.12,c.currentTime);
+          g.gain.exponentialRampToValueAtTime(0.001,c.currentTime+0.2);
+          o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+0.22);
+        """,
+        "finish": """
+          const c=new (window.AudioContext||window.webkitAudioContext)();
+          [392,523,659,784].forEach((f,i)=>{
+            const o=c.createOscillator(),g=c.createGain();
+            o.type=i%2?'triangle':'square';
+            o.frequency.value=f;
+            g.gain.setValueAtTime(0.0001,c.currentTime+i*0.08);
+            g.gain.exponentialRampToValueAtTime(0.14,c.currentTime+i*0.08+0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+i*0.08+0.28);
+            o.connect(g);g.connect(c.destination);
+            o.start(c.currentTime+i*0.08);o.stop(c.currentTime+i*0.08+0.3);
+          });
+        """,
+    }.get(kind, "")
+    if not js.strip():
+        return
+    components.html(
+        "<script>(function(){try{" + js + "}catch(e){}})();</script>",
+        height=0,
+        width=0,
+    )
+
+
 def start_label(sw: int) -> str:
+
     return "JIT" if int(sw) == START_JIT else "M{}".format(int(sw) + 1)
 
 
@@ -358,7 +396,7 @@ def finance_html(state) -> str:
   <div class="fin-grid">
     <div class="fin-card"><div class="lbl">Durasi aktual</div>
       <div class="val">{dur}</div></div>
-    <div class="fin-card"><div class="lbl">Durasi owner</div>
+    <div class="fin-card"><div class="lbl">Durasi proyek rusun</div>
       <div class="val">{owner} hari</div></div>
     <div class="fin-card"><div class="lbl">Biaya tenaga</div>
       <div class="val sm">{labor}</div></div>
@@ -371,18 +409,18 @@ def finance_html(state) -> str:
   </div>
 </div>
 <div class="panel">
-  <h2>Kontrak & margin</h2>
+  <h2>Kontrak tenaga & margin</h2>
   <div class="fin-grid">
-    <div class="fin-card {live}"><div class="lbl">Nilai kontrak</div>
+    <div class="fin-card {live}"><div class="lbl">Kontrak (porsi tenaga)</div>
       <div class="val sm">{kontrak}</div></div>
     <div class="fin-card"><div class="lbl">Ketepatan waktu</div>
       <div class="val sm {late_cls}">{late}</div></div>
     <div class="fin-card"><div class="lbl">Penalti</div>
       <div class="val sm {late_cls}">{pen}</div></div>
-    <div class="fin-card {live}"><div class="lbl">Margin</div>
+    <div class="fin-card {live}"><div class="lbl">Margin tenaga</div>
       <div class="val sm {margin_cls}">{margin}<br/><span class="tiny">{mpct}%</span></div></div>
   </div>
-  <p class="tiny" style="margin-top:8px">Penalti = terlambat × (1/1000) × kontrak. Margin = kontrak − tenaga − penalti.</p>
+  <p class="tiny" style="margin-top:8px">Kontrak di sini = porsi tenaga kerja. Material dari kontraktor utama (tidak dihitung). Penalti = terlambat × (1/1000) × kontrak tenaga. Margin = kontrak − tenaga − penalti.</p>
 </div>
 """.format(
         live_badge='<span class="badge blue">live</span>' if live else "",
@@ -653,20 +691,25 @@ def collect_setup():
     c1, c2, c3 = st.columns(3)
     with c1:
         owner_days = st.number_input(
-            "Durasi owner (hari)", min_value=1, value=int(DEFAULT_OWNER_DURATION)
+            "Durasi proyek rusun (hari)",
+            min_value=1,
+            value=int(DEFAULT_OWNER_DURATION),
+            help="Target durasi proyek; penalti jika selesai lebih lama",
         )
     with c2:
         contract_jt = st.number_input(
-            "Nilai kontrak (juta Rp)",
+            "Kontrak tenaga (juta Rp)",
             min_value=0,
             value=int(DEFAULT_CONTRACT_VALUE // 1_000_000),
+            help="Porsi tenaga kerja saja; material dari kontraktor utama (tidak dihitung)",
         )
     with c3:
         seed = st.number_input("Seed acak", min_value=0, value=42)
 
     st.caption(
-        "Penalti = terlambat × (1/1000) × kontrak · Margin = kontrak − tenaga − penalti · "
-        "Default kontrak 210 jt"
+        "Biaya = tenaga kerja saja · kontrak = porsi tenaga · material dari kontraktor utama "
+        "(bukan kendala). Penalti = terlambat × (1/1000) × kontrak tenaga. "
+        "Default 210 jt · 120 hari."
     )
 
     p1, p2 = st.columns([2, 1.2])
@@ -804,6 +847,8 @@ def main() -> None:
   <p><strong>3. Alur zona.</strong> U1 → U2 → Tangga → U3 → U4, naik lantai.</p>
   <p><strong>4. Curing {c} hari</strong> setelah Pelat selesai per zona.</p>
   <p><strong>5. Start Kerja.</strong> Minggu 1–7 = push. JIT = masuk tepat waktu.</p>
+  <p><strong>6. Biaya = tenaga kerja saja.</strong> Nilai kontrak di sini = <strong>porsi tenaga kerja</strong> (bukan total kontrak bangunan). Material & alat diasumsikan dari <strong>kontraktor utama</strong> dan <strong>tidak menjadi kendala</strong> (selalu tersedia, tidak dihitung di simulasi).</p>
+  <p><strong>7. Durasi proyek rusun.</strong> Target waktu penyelesaian proyek (dulu disebut “durasi owner”) — dipakai menghitung penalti keterlambatan.</p>
 </div>
 """.format(z=" · ".join(ZONE_LABELS), c=CURING_DAYS),
         unsafe_allow_html=True,
@@ -845,9 +890,11 @@ atas menunggu curing zona di bawahnya. Di takt plan, minggu curing biasanya **pu
 - **Variasi kapasitas** — batas **bawah–atas** hari per zona
   (contoh 1–6 acak; **7–7** = konstan 7 hari)
 - **Biaya / hari** — default 350 (× Rp1.000 = Rp350.000)
-- **Durasi owner** default 120 hari; **kontrak** default 210 juta
-- **Penalti** = hari terlambat × (1/1000) × kontrak
-- **Margin** = kontrak − biaya tenaga − penalti
+- **Durasi proyek rusun** default 120 hari (target selesai; penalti jika lewat)
+- **Nilai kontrak** = **porsi tenaga kerja** saja (default 210 juta), bukan total bangunan
+- **Material & alat** dari kontraktor utama — selalu tersedia, **bukan kendala**, tidak dihitung biaya di sini
+- **Penalti** = hari terlambat × (1/1000) × kontrak tenaga
+- **Margin** = kontrak tenaga − biaya tenaga − penalti
 
 ### Waktu
 Simulasi per **hari**. Takt plan diagregasi per minggu:
@@ -888,6 +935,8 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
         st.session_state.rng = create_rng(seed)
         st.session_state.sim_state = create_initial_state(cfg)
         st.session_state.running = True
+        st.session_state["_sfx_done"] = False
+        play_sfx("zone")  # buka audio context
         st.rerun()
 
     if pause_clicked:
@@ -961,6 +1010,9 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
     st.markdown(wagons_html(state), unsafe_allow_html=True)
 
     if state.finished:
+        if not st.session_state.get("_sfx_done"):
+            play_sfx("finish")
+            st.session_state["_sfx_done"] = True
         st.success(
             "Selesai hari **{}** (minggu ke-{})".format(
                 state.metrics.finish_day,

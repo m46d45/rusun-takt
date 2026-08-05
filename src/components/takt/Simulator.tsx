@@ -291,6 +291,24 @@ export function Simulator() {
             (dan dibayar) segera saat zona pertama kali boleh dimasuki — sehari
             setelah wagon depan lepas / syarat curing terpenuhi.
           </p>
+          <p>
+            <span className="font-semibold text-fg">
+              6. Biaya = tenaga kerja saja.
+            </span>{" "}
+            Nilai kontrak di simulasi ={" "}
+            <strong className="text-fg">porsi tenaga kerja</strong> (bukan total
+            kontrak bangunan). Material & alat diasumsikan dari{" "}
+            <strong className="text-fg">kontraktor utama</strong> dan{" "}
+            <strong className="text-fg">tidak menjadi kendala</strong> (selalu
+            tersedia, tidak dihitung di sini).
+          </p>
+          <p>
+            <span className="font-semibold text-fg">
+              7. Durasi proyek rusun.
+            </span>{" "}
+            Target waktu penyelesaian proyek — dipakai menghitung penalti
+            keterlambatan (hari lewat target × 1/1000 × kontrak tenaga).
+          </p>
           {started && state.day > 0 ? (
             <p className="tabular text-xs text-subtle">
               Berjalan: Minggu {weekNow} · hari {state.day}
@@ -324,7 +342,7 @@ export function Simulator() {
             <div className="grid gap-3 rounded-lg border border-border bg-surface-2 p-3 sm:grid-cols-2">
               <label className="block text-sm">
                 <span className="text-xs font-medium uppercase tracking-wide text-subtle">
-                  Durasi owner (hari)
+                  Durasi proyek rusun (hari)
                 </span>
                 <input
                   type="number"
@@ -348,7 +366,7 @@ export function Simulator() {
               </label>
               <label className="block text-sm">
                 <span className="text-xs font-medium uppercase tracking-wide text-subtle">
-                  Nilai kontrak (juta Rp)
+                  Kontrak tenaga (juta Rp)
                 </span>
                 <input
                   type="number"
@@ -373,8 +391,10 @@ export function Simulator() {
                 </span>
               </label>
               <p className="text-[11px] text-subtle sm:col-span-2">
-                Penalti = hari terlambat × (1/1000) × kontrak. Margin = kontrak
-                − biaya tenaga − penalti.
+                Biaya = tenaga kerja saja. Kontrak = porsi tenaga (bukan total
+                bangunan). Material & alat dari kontraktor utama — selalu
+                tersedia, tidak dihitung. Penalti = terlambat × (1/1000) ×
+                kontrak tenaga. Margin = kontrak − biaya tenaga − penalti.
               </p>
             </div>
 
