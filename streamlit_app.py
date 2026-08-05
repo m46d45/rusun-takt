@@ -837,10 +837,6 @@ def collect_setup():
         '(× Rp1.000)</span></p>',
         unsafe_allow_html=True,
     )
-    st.caption(
-        "Variasi kapasitas = hari kerja per zona. Bawah–atas acak (mis. 1–6); "
-        "sama (mis. 7–7) = konstan."
-    )
     for i, defn in enumerate(TEAMS):
         a, b, c, d, e = st.columns(col_ratios)
         with a:
@@ -889,6 +885,11 @@ def collect_setup():
                 daily_cost=int(cost_ui) * 1000,
             )
         )
+
+    st.caption(
+        "Variasi kapasitas = hari kerja per zona. Bawah–atas acak (mis. 1–6); "
+        "sama (mis. 7–7) = konstan."
+    )
 
     cfg = SimConfig(
         teams=team_rows,
