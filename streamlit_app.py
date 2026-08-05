@@ -960,11 +960,11 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
 - **Start** — animasi hari-per-hari
 - **Jeda** / **1 hari** / **Selesaikan**
 - **Kecepatan** — Lambat (1 dtk) · Normal · Cepat · Instan
-- **Suara (3 jenis, mesin):**
-  1. **Zona selesai** — beep-beep naik
-  2. **Tim/wagon selesai** semua zona — ting logam
-  3. **Proyek selesai** — fanfare singkat  
-  Tombol **Tes suara** memutar ketiganya berurutan. Mode Instan/Selesaikan hanya memutar fanfare proyek. Browser kadang memblokir audio sampai ada klik dulu.
+- **Suara (3 event, beda jelas):**
+  1. **Ding** — satu zona selesai
+  2. **Do–mi** — satu tim selesai semua zona (Lt.1–3)
+  3. **Fanfare** — seluruh proyek selesai  
+  Tombol **Tes suara** memutar ketiganya berurutan. Saat jalan, muncul toast 🔊. Mode Instan/Selesaikan hanya fanfare.
 
 ### Membaca hasil
 - **Waste** = tim di site tapi menunggu (tetap dibayar) — ★ = waste tertinggi
@@ -993,7 +993,6 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
     test_sfx = b5.button("🔊 Tes suara", use_container_width=True)
 
     if test_sfx:
-        # putar berurutan lewat satu iframe (zona → tim → proyek)
         components.html(
             """
 <script>
@@ -1001,43 +1000,41 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
     const c = new AC();
-    function chirp(f0,f1,t0,dur,g0){
-      const o=c.createOscillator(),g=c.createGain();
-      o.type='square';
-      o.frequency.setValueAtTime(f0,c.currentTime+t0);
-      o.frequency.exponentialRampToValueAtTime(f1,c.currentTime+t0+dur);
-      g.gain.setValueAtTime(0.0001,c.currentTime+t0);
-      g.gain.exponentialRampToValueAtTime(g0,c.currentTime+t0+0.012);
-      g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+t0+dur);
-      o.connect(g);g.connect(c.destination);
-      o.start(c.currentTime+t0);o.stop(c.currentTime+t0+dur+0.02);
+    function note(f,t0,dur,type,gain,f2){
+      const o=c.createOscillator(), g=c.createGain();
+      o.type=type;
+      o.frequency.setValueAtTime(f, c.currentTime+t0);
+      if(f2) o.frequency.exponentialRampToValueAtTime(f2, c.currentTime+t0+dur*0.9);
+      g.gain.setValueAtTime(0.0001, c.currentTime+t0);
+      g.gain.exponentialRampToValueAtTime(gain, c.currentTime+t0+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime+t0+dur);
+      o.connect(g); g.connect(c.destination);
+      o.start(c.currentTime+t0); o.stop(c.currentTime+t0+dur+0.03);
     }
-    function tone(f,t0,dur,type,g0){
-      const o=c.createOscillator(),g=c.createGain();
-      o.type=type;o.frequency.value=f;
-      g.gain.setValueAtTime(0.0001,c.currentTime+t0);
-      g.gain.exponentialRampToValueAtTime(g0,c.currentTime+t0+0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001,c.currentTime+t0+dur);
-      o.connect(g);g.connect(c.destination);
-      o.start(c.currentTime+t0);o.stop(c.currentTime+t0+dur+0.02);
-    }
-    // 1 zona: beep-beep
-    chirp(520,780,0,0.1,0.16); chirp(780,1175,0.14,0.12,0.16);
-    // 2 tim: ting (delay ~0.55s)
-    tone(1760,0.55,0.18,'square',0.17);
-    tone(2349,0.60,0.14,'sine',0.11);
-    // 3 proyek: fanfare (delay ~1.0s)
-    tone(220,1.0,0.32,'sawtooth',0.16);
-    tone(988,1.38,0.12,'square',0.17);
-    tone(1319,1.52,0.14,'square',0.17);
-    tone(523,1.7,0.4,'triangle',0.13);
-    tone(784,1.7,0.45,'sine',0.13);
+    // 1) ZONA — satu ding (t=0)
+    note(1320, 0, 0.16, 'sine', 0.2);
+    // 2) TIM — do-mi (t=0.7)
+    note(523, 0.7, 0.2, 'triangle', 0.2);
+    note(784, 0.92, 0.28, 'triangle', 0.18);
+    // 3) PROYEK — fanfare (t=1.5)
+    note(200, 1.5, 0.35, 'sawtooth', 0.16, 700);
+    note(523, 1.9, 0.25, 'square', 0.17);
+    note(659, 2.1, 0.25, 'square', 0.16);
+    note(784, 2.3, 0.45, 'triangle', 0.18);
   } catch(e) {}
 })();
 </script>
-<p style="font-size:12px;color:#475569;margin:0">1 beep-beep (zona) · 2 ting (tim) · 3 fanfare (proyek)</p>
+<p style="font-size:12px;color:#0c4a6e;margin:4px 0 0;font-weight:600">
+1 · Ding = zona selesai &nbsp;→&nbsp;
+2 · Do–mi = tim selesai Lt.1–3 &nbsp;→&nbsp;
+3 · Fanfare = proyek selesai
+</p>
 """,
-            height=28,
+            height=40,
+        )
+        st.caption(
+            "Urutan tes: (1) ding zona · (2) dua nada tim · (3) fanfare proyek. "
+            "Saat simulasi, toast 🔊 ikut menjelaskan event."
         )
 
     if start_clicked:
