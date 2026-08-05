@@ -289,13 +289,18 @@ def main() -> None:
                 int(t.waste_cost),
             ]
         )
-    st.table([header] + body)
+    # tabel markdown (tanpa pandas)
+    md = "| " + " | ".join(str(h) for h in header) + " |\n"
+    md += "| " + " | ".join(["---"] * len(header)) + " |\n"
+    for row in body:
+        md += "| " + " | ".join(str(c) for c in row) + " |\n"
+    st.markdown(md)
 
     st.subheader("Progress wagon (zona selesai / {})".format(TOTAL_UNITS))
     chart_data = {
         TEAMS[i]["short"]: t.progress for i, t in enumerate(final.teams)
     }
-    st.bar_chart(chart_data, horizontal=True, color="#0ea5e9")
+    st.bar_chart(chart_data)
 
     st.subheader("Takt plan (minggu)")
     st.caption(
@@ -311,7 +316,11 @@ def main() -> None:
     ]
     takt_header = ["Zona"] + ["M{}".format(w + 1) for w in range(weeks)]
     takt_body = [[zone_names[z]] + work[z] for z in range(TOTAL_UNITS)]
-    st.table([takt_header] + takt_body)
+    md = "| " + " | ".join(str(h) for h in takt_header) + " |\n"
+    md += "| " + " | ".join(["---"] * len(takt_header)) + " |\n"
+    for row in takt_body:
+        md += "| " + " | ".join(str(c) if c != "" else " " for c in row) + " |\n"
+    st.markdown(md)
 
     st.subheader("Ilustrasi zona")
     last_progress = final.teams[-1].progress
