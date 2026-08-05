@@ -132,7 +132,7 @@ st.markdown(
     background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
     padding: 7px 9px; margin-bottom: 6px;
   }
-  .wagon.hot { border-color: #fca5a5; background: #fef2f2; }
+  .wagon.hot { border-color: #f97316; background: #ffedd5; box-shadow: 0 0 0 2px #fdba74; }
   .wagon .helm {
     width: 30px; height: 30px; border-radius: 50% 50% 42% 42%;
     display: flex; align-items: center; justify-content: center;
@@ -408,120 +408,169 @@ def finance_html(state) -> str:
     )
 
 
+
 def wagons_html(state) -> str:
     max_waste = max((t.waste_cost for t in state.teams), default=0)
-    parts = ['<div class="panel"><h2>Wagon / tim kerja</h2><div class="sub">Warna helm = identitas wagon · bar = progress zona</div>']
+    parts = [
+        '<div class="panel">',
+        "<h2>Wagon / tim kerja</h2>",
+        '<div class="sub">Helm berwarna · bar progress · ★ waste tertinggi (latar oranye)</div>',
+    ]
     for i, t in enumerate(state.teams):
         setup = state.config.teams[i]
         pct = min(100, (t.progress / TOTAL_UNITS) * 100) if TOTAL_UNITS else 0
         team_cost = t.days_on_site * setup.daily_cost
-        hot = max_waste > 0 and t.waste_cost == max_waste and t.waste_cost > 0
+        wp = (t.waste_cost / team_cost * 100) if team_cost > 0 else 0.0
+        is_max = max_waste > 0 and t.waste_cost == max_waste and t.waste_cost > 0
+        hot_cls = "hot" if is_max else ""
+        star = " ★" if is_max else ""
+        wcls = "w" if t.waste_cost > 0 else ""
         parts.append(
-            """
-<div class="wagon {hot}">
-  <div class="helm" style="background:{c}">{n}</div>
-  <div class="meta">
-    <div class="name">{name}</div>
-    <div class="sub">{status} · {start} · var {lo}–{hi}</div>
-    <div class="bar"><i style="width:{pct}%;background:{c}"></i></div>
-  </div>
-  <div class="nums">
-    {prog}/{tot} zona<br/>
-    biaya {cost}<br/>
-    <span class="{wcls}">waste {waste}</span>
-  </div>
-</div>
-""".format(
-                hot="hot" if hot else "",
-                c=TEAMS[i]["color"],
-                n=i + 1,
-                name=TEAMS[i]["short"],
-                status=t.status_label,
-                start=start_label(setup.start_week),
-                lo=setup.dice_min,
-                hi=setup.dice_max,
-                pct=pct,
-                prog=t.progress,
-                tot=TOTAL_UNITS,
-                cost=fmt_rp(team_cost),
-                waste=fmt_rp(t.waste_cost),
-                wcls="w" if t.waste_cost > 0 else "",
-            )
+            '<div class="wagon '
+            + hot_cls
+            + '">'
+            '<div class="helm" style="background:'
+            + TEAMS[i]["color"]
+            + '">'
+            + str(i + 1)
+            + "</div>"
+            '<div class="meta">'
+            '<div class="name">'
+            + TEAMS[i]["short"]
+            + star
+            + "</div>"
+            '<div class="sub">'
+            + t.status_label
+            + " · "
+            + start_label(setup.start_week)
+            + " · var "
+            + str(setup.dice_min)
+            + "–"
+            + str(setup.dice_max)
+            + "</div>"
+            '<div class="bar"><i style="width:'
+            + str(pct)
+            + "%;background:"
+            + TEAMS[i]["color"]
+            + '"></i></div>'
+            "</div>"
+            '<div class="nums">'
+            + str(t.progress)
+            + "/"
+            + str(TOTAL_UNITS)
+            + " zona<br/>"
+            "biaya "
+            + fmt_rp(team_cost)
+            + "<br/>"
+            '<span class="'
+            + wcls
+            + '">waste '
+            + fmt_rp(t.waste_cost)
+            + (" ({:.0f}%)".format(wp) if t.waste_cost else "")
+            + "</span>"
+            "</div></div>"
         )
     parts.append("</div>")
     return "".join(parts)
 
 
-def results_table_html(state) -> str:
-    rows = []
+def results_rows(state):
+    """Plain data for hasil per tim."""
+    body = []
     total_cap = total_unused = total_waste = 0
     max_waste = max((t.waste_cost for t in state.teams), default=0)
+    total_labor = state.metrics.total_cost or 0
     for i, t in enumerate(state.teams):
         durs = t.zone_durations or [0]
         total_cap += t.capacity_total
         total_unused += t.unused_capacity
         total_waste += t.waste_cost
-        danger = max_waste > 0 and t.waste_cost == max_waste and t.waste_cost > 0
-        rows.append(
-            """
-<tr>
-  <td><span style="display:inline-block;width:18px;height:18px;border-radius:50%;
-    background:{c};color:#fff;font-size:10px;font-weight:800;text-align:center;
-    line-height:18px;margin-right:4px">{n}</span>{name}</td>
-  <td>{start}</td>
-  <td>{var}</td>
-  <td>{wk}</td>
-  <td>{cap}</td>
-  <td class="{d}">{un}</td>
-  <td>{mx}</td>
-  <td>{mn}</td>
-  <td>{avg}</td>
-  <td class="{d}">{waste}</td>
-</tr>
-""".format(
-                c=TEAMS[i]["color"],
-                n=i + 1,
-                name=TEAMS[i]["short"],
-                start=start_label(state.config.teams[i].start_week),
-                var="{}–{}".format(
+        team_cost = t.days_on_site * state.config.teams[i].daily_cost
+        wp = (t.waste_cost / team_cost * 100) if team_cost > 0 else 0.0
+        is_max = max_waste > 0 and t.waste_cost == max_waste and t.waste_cost > 0
+        body.append(
+            {
+                "i": i,
+                "name": TEAMS[i]["short"],
+                "color": TEAMS[i]["color"],
+                "start": start_label(state.config.teams[i].start_week),
+                "var": "{}–{}".format(
                     state.config.teams[i].dice_min, state.config.teams[i].dice_max
                 ),
-                wk=day_to_week(t.finish_day) if t.finish_day else "—",
-                cap=t.capacity_total,
-                un=t.unused_capacity if t.unused_capacity else "—",
-                d="danger" if danger or t.unused_capacity else "",
-                mx=max(durs) if durs else "—",
-                mn=min(durs) if durs else "—",
-                avg="{:.1f}".format(sum(durs) / len(durs)) if durs else "—",
-                waste=fmt_rp(t.waste_cost) if t.waste_cost else "—",
-            )
+                "wk": day_to_week(t.finish_day) if t.finish_day else "—",
+                "cap": t.capacity_total,
+                "un": t.unused_capacity,
+                "mx": max(durs) if durs else 0,
+                "mn": min(durs) if durs else 0,
+                "avg": round(sum(durs) / len(durs), 1) if durs else 0,
+                "waste": t.waste_cost,
+                "waste_pct": wp,
+                "is_max_waste": is_max,
+            }
         )
-    return """
-<div class="panel">
-  <h2>Hasil per tim</h2>
-  <div style="overflow-x:auto">
-  <table class="rt">
-    <thead><tr>
-      <th>Tim (wagon)</th><th>Start</th><th>Var</th><th>Mg selesai</th>
-      <th>Hari kerja</th><th>Tak terpakai</th><th>Maks</th><th>Min</th><th>Rata</th><th>Waste</th>
-    </tr></thead>
-    <tbody>
-      {rows}
-      <tr class="tot">
-        <td>TOTAL</td><td></td><td></td><td></td>
-        <td>{cap}</td><td>{un}</td><td></td><td></td><td></td>
-        <td>{waste}</td>
-      </tr>
-    </tbody>
-  </table>
-  </div>
-</div>
-""".format(
-        rows="".join(rows),
-        cap=total_cap,
-        un=total_unused,
-        waste=fmt_rp(total_waste),
+    total = {
+        "cap": total_cap,
+        "un": total_unused,
+        "waste": total_waste,
+        "waste_pct": (total_waste / total_labor * 100) if total_labor else 0.0,
+    }
+    return body, total
+
+
+def render_results_table(state) -> None:
+    body, total = results_rows(state)
+    parts = [
+        '<div class="panel">',
+        "<h2>Hasil per tim</h2>",
+        '<div class="sub">★ = waste tertinggi (disorot merah muda)</div>',
+        '<div style="overflow-x:auto">',
+        '<table class="rt">',
+        "<thead><tr>",
+        "<th>Tim</th><th>Start</th><th>Var</th><th>Mg selesai</th>",
+        "<th>Hari kerja</th><th>Tak terpakai</th><th>Maks</th><th>Min</th>",
+        "<th>Rata</th><th>Waste</th><th>Waste %</th>",
+        "</tr></thead><tbody>",
+    ]
+    for r in body:
+        mark = " ★" if r["is_max_waste"] else ""
+        bg = "background:#fee2e2;" if r["is_max_waste"] else ""
+        dcls = "danger" if r["waste"] > 0 else ""
+        parts.append(
+            '<tr style="' + bg + '">'
+            '<td><span style="display:inline-block;width:18px;height:18px;border-radius:50%;'
+            "background:" + r["color"] + ";color:#fff;font-size:10px;font-weight:800;"
+            'text-align:center;line-height:18px;margin-right:4px">'
+            + str(r["i"] + 1)
+            + "</span>"
+            + r["name"]
+            + mark
+            + "</td>"
+            "<td>" + r["start"] + "</td>"
+            "<td>" + r["var"] + "</td>"
+            "<td>" + str(r["wk"]) + "</td>"
+            "<td>" + str(r["cap"]) + "</td>"
+            '<td class="' + dcls + '">' + (str(r["un"]) if r["un"] else "—") + "</td>"
+            "<td>" + (str(r["mx"]) if r["mx"] else "—") + "</td>"
+            "<td>" + (str(r["mn"]) if r["mn"] else "—") + "</td>"
+            "<td>" + (str(r["avg"]) if r["avg"] else "—") + "</td>"
+            '<td class="' + dcls + '">'
+            + (fmt_rp(r["waste"]) if r["waste"] else "—")
+            + "</td>"
+            '<td class="' + dcls + '">'
+            + ("{:.0f}%".format(r["waste_pct"]) if r["waste"] else "—")
+            + "</td>"
+            "</tr>"
+        )
+    parts.append(
+        '<tr class="tot"><td>TOTAL</td><td></td><td></td><td></td>'
+        "<td>" + str(total["cap"]) + "</td>"
+        "<td>" + str(total["un"]) + "</td>"
+        "<td></td><td></td><td></td>"
+        "<td>" + fmt_rp(total["waste"]) + "</td>"
+        "<td>" + "{:.0f}%".format(total["waste_pct"]) + "</td>"
+        "</tr></tbody></table></div></div>"
     )
+    st.markdown("".join(parts), unsafe_allow_html=True)
 
 
 def takt_table_html(state) -> str:
@@ -770,27 +819,28 @@ def main() -> None:
 
     state = st.session_state.sim_state
     if state is None:
-        st.info("Klik **Start** untuk animasi. Sandbox web tetap lebih halus untuk presentasi.")
+        st.info("Klik **Start** untuk animasi hari-per-hari.")
         empty = create_initial_state(cfg)
-        left, right = st.columns([1.35, 1])
-        with left:
+        col_b, col_m = st.columns([1.4, 1])
+        with col_b:
+            st.markdown("##### Ilustrasi rusun")
             st.markdown(render_building_html(empty), unsafe_allow_html=True)
-        with right:
+        with col_m:
             st.markdown(finance_html(empty), unsafe_allow_html=True)
-            st.markdown(wagons_html(empty), unsafe_allow_html=True)
+        st.markdown(wagons_html(empty), unsafe_allow_html=True)
         return
 
-    # Live two-column like sandbox
-    left, right = st.columns([1.35, 1])
-    with left:
+    # Layout: kiri = ilustrasi, kanan = metrik/kontrak; wagon di BAWAH ilustrasi (full width)
+    col_b, col_m = st.columns([1.4, 1])
+    with col_b:
         st.markdown("##### Ilustrasi rusun")
         bld = st.empty()
         bld.markdown(render_building_html(state), unsafe_allow_html=True)
-    with right:
+    with col_m:
         fin_ph = st.empty()
-        wag_ph = st.empty()
         fin_ph.markdown(finance_html(state), unsafe_allow_html=True)
-        wag_ph.markdown(wagons_html(state), unsafe_allow_html=True)
+    wag_ph = st.empty()
+    wag_ph.markdown(wagons_html(state), unsafe_allow_html=True)
 
     turbo = st.session_state.pop("_turbo", False)
     if st.session_state.running and not state.finished:
@@ -831,7 +881,7 @@ def main() -> None:
                 day_to_week(state.metrics.finish_day or 0),
             )
         )
-        st.markdown(results_table_html(state), unsafe_allow_html=True)
+        render_results_table(state)
         st.markdown(takt_table_html(state), unsafe_allow_html=True)
         with st.expander("Log"):
             for line in reversed(state.log[-30:]):
