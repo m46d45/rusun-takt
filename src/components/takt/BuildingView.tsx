@@ -40,16 +40,54 @@ function isZoneComplete(teams: TeamState[], absoluteZone: number): boolean {
   return last.progress > absoluteZone;
 }
 
+/**
+ * Helm hanya muncul jika tim benar-benar di site & aktif di zona itu
+ * (working / blocked / curing). Progress 0 + belum start → jangan tampil.
+ *
+ * Penting: jangan tampilkan SEMUA tim yang menunggu di zona yang sama
+ * (dulu: 7 helm menumpuk di U1, yang kelihatan hanya #7 di atas).
+ * Per zona: prioritaskan yang working; jika hanya menunggu, tampilkan
+ * wagon terdepan (team id terkecil) saja.
+ */
 function teamsOnFloor(teams: TeamState[], floor: number) {
-  return teams
+  const candidates = teams
     .map((t, i) => {
       if (t.progress >= TOTAL_UNITS) return null;
+      if (!t.mobilized) return null;
+      if (
+        t.status !== "working" &&
+        t.status !== "blocked" &&
+        t.status !== "curing"
+      ) {
+        return null;
+      }
       const f = Math.floor(t.progress / UNITS_PER_FLOOR);
       if (f !== floor) return null;
       const z = t.progress % UNITS_PER_FLOOR;
       return { t, i, zone: z };
     })
     .filter(Boolean) as { t: TeamState; i: number; zone: number }[];
+
+  const byZone = new Map<number, typeof candidates>();
+  for (const c of candidates) {
+    const list = byZone.get(c.zone) ?? [];
+    list.push(c);
+    byZone.set(c.zone, list);
+  }
+
+  const result: typeof candidates = [];
+  for (const list of byZone.values()) {
+    const working = list.filter((c) => c.t.status === "working");
+    if (working.length > 0) {
+      // Satu zona hanya satu yang boleh kerja — ambil yang working
+      result.push(working[0]!);
+      continue;
+    }
+    // Hanya menunggu: wagon terdepan (id terkecil) di zona itu
+    list.sort((a, b) => a.i - b.i);
+    result.push(list[0]!);
+  }
+  return result;
 }
 
 export function BuildingView({
@@ -82,7 +120,7 @@ export function BuildingView({
             {def.short}
           </div>
         ))}
-        <div className="flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-400">
+        <div className="flex items-center gap-1 rounded-md border border-emerald-500/40 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
           <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-white">
             <Check className="h-2.5 w-2.5" strokeWidth={3} />
           </span>
@@ -99,7 +137,7 @@ export function BuildingView({
           />
         </div>
         <div
-          className="mx-auto w-11/12 overflow-hidden rounded-t-md border-2 border-b-0 bg-surface-2"
+          className="mx-auto w-11/12 overflow-hidden rounded-t-md border-2 border-b-0 bg-slate-100"
           style={{ borderColor: C_STRUCT }}
         >
           {[...Array(FLOORS)].map((_, rev) => {
@@ -117,9 +155,9 @@ export function BuildingView({
         </div>
         <div
           className="mx-auto w-[96%] rounded-b-md border-2 px-3 py-2"
-          style={{ borderColor: `${C_STRUCT}aa`, backgroundColor: "#374151" }}
+          style={{ borderColor: `${C_STRUCT}aa`, backgroundColor: "#4b5563" }}
         >
-          <div className="text-[10px] uppercase tracking-wide text-zinc-200">
+          <div className="text-[10px] uppercase tracking-wide text-zinc-100">
             Fondasi & sloof
           </div>
           <div
@@ -132,7 +170,6 @@ export function BuildingView({
   );
 }
 
-/** Cek hijau di tengah zona */
 function GreenCheck({ className }: { className?: string }) {
   return (
     <span
@@ -172,22 +209,23 @@ function UnitCell({
   occupied?: boolean;
   complete?: boolean;
 }) {
-  let bg = "#18181b";
-  if (hasPaint) bg = "#3f3f46";
-  else if (hasPlaster) bg = "#2e1065";
-  else if (showWalls) bg = "#450a0a";
-  else if (showFrame) bg = "#27272a";
+  // Base cerah; gelap hanya seiring progres finishing
+  let bg = "#f1f5f9";
+  if (hasPaint) bg = "#e0f2fe";
+  else if (hasPlaster) bg = "#f3e8ff";
+  else if (showWalls) bg = "#fee2e2";
+  else if (showFrame) bg = "#e2e8f0";
 
   return (
     <div
       className={cn(
         "relative min-w-0 flex-1",
-        occupied && "ring-1 ring-inset ring-sky-400/50",
-        complete && "ring-2 ring-inset ring-emerald-400/70",
+        occupied && "ring-1 ring-inset ring-sky-500/60",
+        complete && "ring-2 ring-inset ring-emerald-500/70",
       )}
       style={{ background: bg }}
     >
-      <span className="absolute left-1 top-1 z-[1] text-[8px] text-white/40">
+      <span className="absolute left-1 top-1 z-[1] text-[8px] font-medium text-slate-500">
         {label}
       </span>
       {complete ? (
@@ -203,55 +241,50 @@ function UnitCell({
             className="absolute bottom-0 right-1 top-2 w-1.5 rounded-sm"
             style={{ backgroundColor: C_STRUCT }}
           />
+          <div
+            className="absolute left-1 right-1 top-2 h-1.5 rounded-sm"
+            style={{ backgroundColor: C_STRUCT }}
+          />
         </>
       ) : null}
       {hasSlab || slabFrac > 0 ? (
         <div
-          className="absolute inset-x-0 top-0 h-2"
+          className="absolute bottom-0 left-0 right-0"
           style={{
+            height: hasSlab ? "18%" : `${Math.max(4, slabFrac * 18)}%`,
             backgroundColor: C_SLAB,
-            opacity: hasSlab ? 1 : Math.min(1, slabFrac + 0.35),
+            opacity: hasSlab ? 0.85 : 0.45,
           }}
         />
       ) : null}
-      {showWalls && !complete ? (
+      {showWalls ? (
         <div
-          className="absolute left-1/2 top-1/2 h-6 w-5 -translate-x-1/2 -translate-y-1/2 rounded-sm border-2 sm:h-7 sm:w-6"
-          style={{
-            borderColor: hasPaint ? C_PAINT : hasPlaster ? C_PLASTER : C_WALL,
-            backgroundColor: hasPaint
-              ? "#e4e4e7"
-              : hasPlaster
-                ? "#3b0764"
-                : "#450a0a",
-          }}
-        />
-      ) : null}
-      {showWalls && complete ? (
-        <div
-          className="absolute left-1/2 top-1/2 h-6 w-5 -translate-x-1/2 -translate-y-1/2 rounded-sm border-2 opacity-40 sm:h-7 sm:w-6"
-          style={{
-            borderColor: hasPaint ? C_PAINT : hasPlaster ? C_PLASTER : C_WALL,
-            backgroundColor: hasPaint
-              ? "#e4e4e7"
-              : hasPlaster
-                ? "#3b0764"
-                : "#450a0a",
-          }}
+          className="absolute inset-x-3 bottom-2 top-5 rounded-sm border-2"
+          style={{ borderColor: C_WALL, backgroundColor: `${C_WALL}22` }}
         />
       ) : null}
       {hasMep ? (
-        <div className="absolute bottom-2 left-2 flex gap-1">
-          <span
-            className="h-1.5 w-1.5 rounded-full"
-            style={{ backgroundColor: C_MEP }}
-          />
-        </div>
+        <div
+          className="absolute right-2 top-3 h-2 w-2 rounded-full"
+          style={{ backgroundColor: C_MEP }}
+        />
+      ) : null}
+      {hasPlaster ? (
+        <div
+          className="absolute left-2 bottom-3 h-1.5 w-6 rounded-sm"
+          style={{ backgroundColor: C_PLASTER }}
+        />
       ) : null}
       {hasFinish ? (
         <div
-          className="absolute inset-x-0 bottom-0 h-1.5"
+          className="absolute right-2 bottom-3 h-1.5 w-6 rounded-sm"
           style={{ backgroundColor: C_TILE }}
+        />
+      ) : null}
+      {hasPaint ? (
+        <div
+          className="absolute inset-x-4 top-4 h-1 rounded-full"
+          style={{ backgroundColor: C_PAINT }}
         />
       ) : null}
     </div>
@@ -324,23 +357,23 @@ function FloorStrip({
     <div
       className={cn(
         "relative border-b-2 last:border-b-0",
-        curing ? "border-yellow-400/60 bg-yellow-500/10" : "border-zinc-600/80",
+        curing ? "border-yellow-400/60 bg-yellow-100/80" : "border-slate-300",
       )}
     >
       <div className="relative flex min-h-[5.5rem] sm:min-h-[6.5rem]">
         <div className="relative flex min-w-0 flex-[2]">
           <UnitCell {...unitProps(0, "U1")} />
-          <div className="w-px bg-white/10" />
+          <div className="w-px bg-slate-300" />
           <UnitCell {...unitProps(1, "U2")} />
         </div>
         <div
           className={cn(
             "relative w-12 shrink-0 border-x-2 sm:w-14",
-            occupiedZones.has(2) && "ring-1 ring-inset ring-sky-400/50",
-            complete[2] && "ring-2 ring-inset ring-emerald-400/70",
+            occupiedZones.has(2) && "ring-1 ring-inset ring-sky-500/60",
+            complete[2] && "ring-2 ring-inset ring-emerald-500/70",
           )}
           style={{
-            backgroundColor: hasSlab ? "#a16207" : "#3f3f46",
+            backgroundColor: hasSlab ? "#fef08a" : "#cbd5e1",
             borderColor: hasSlab ? C_SLAB : C_STRUCT,
           }}
         >
@@ -350,14 +383,14 @@ function FloorStrip({
                 key={s}
                 className="h-1.5 rounded-sm"
                 style={{
-                  backgroundColor: hasSlab ? C_SLAB : "#71717a",
+                  backgroundColor: hasSlab ? C_SLAB : "#64748b",
                   marginLeft: s % 2 === 0 ? "8%" : "35%",
                   marginRight: s % 2 === 0 ? "35%" : "8%",
                 }}
               />
             ))}
           </div>
-          <p className="absolute inset-x-0 bottom-1 z-[1] text-center text-[8px] font-bold uppercase text-yellow-50">
+          <p className="absolute inset-x-0 bottom-1 z-[1] text-center text-[8px] font-bold uppercase text-slate-800">
             Tangga
           </p>
           {complete[2] ? (
@@ -373,7 +406,7 @@ function FloorStrip({
         </div>
         <div className="relative flex min-w-0 flex-[2]">
           <UnitCell {...unitProps(3, "U3")} />
-          <div className="w-px bg-white/10" />
+          <div className="w-px bg-slate-300" />
           <UnitCell {...unitProps(4, "U4")} />
         </div>
 
@@ -410,7 +443,7 @@ function FloorStrip({
           })}
         </div>
 
-        <div className="absolute left-2 top-1.5 z-20 rounded bg-bg/85 px-1.5 py-0.5 text-[10px] font-semibold text-fg">
+        <div className="absolute left-2 top-1.5 z-20 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-slate-800 shadow-sm">
           Lt.{floor + 1}
         </div>
       </div>
