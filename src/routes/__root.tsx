@@ -18,8 +18,14 @@ export const Route = createRootRoute({
         content:
           "Simulasi parade tim kerja dan metodologi Takt: push, capacity building, dan flow.",
       },
+      { name: "theme-color", content: "#0c4a6e" },
     ],
-    links: [{ rel: "stylesheet", href: appCss }],
+    links: [
+      { rel: "stylesheet", href: appCss },
+      { rel: "icon", href: "/favicon.ico", sizes: "any" },
+      { rel: "icon", type: "image/png", href: "/favicon.png", sizes: "32x32" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
+    ],
   }),
   component: RootComponent,
 });
