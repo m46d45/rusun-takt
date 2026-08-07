@@ -67,3 +67,27 @@ streamlit run streamlit_app.py
 4. Deploy
 
 File terkait: `streamlit_app.py`, `rusun_takt_engine.py`, `requirements.txt`, `.streamlit/config.toml`
+
+## Vercel (web app React — full UI + animasi)
+
+Deploy aplikasi **sandbox** (React/TanStack) ke Vercel:
+
+1. Buka [vercel.com/new](https://vercel.com/new) → **Import** repo `m46d45/rusun-takt`
+2. Framework: biarkan deteksi / gunakan `vercel.json`
+3. Build Command: `npm run build`
+4. Deploy
+
+Atau satu klik (setelah login Vercel + hubungkan GitHub):
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/m46d45/rusun-takt)
+
+CLI (lokal, butuh token):
+
+```bash
+npm i -g vercel
+vercel login
+vercel --prod
+```
+
+Build menghasilkan `.vercel/output` (preset Nitro Vercel). Pastikan `npm run build` lulus sebelum deploy.
+
