@@ -40,6 +40,7 @@ import { Debrief } from "./Debrief";
 import { ResultsChart } from "./ResultsChart";
 import { HelmetBadge } from "./Helmet";
 import { ManualDialog } from "./ManualDialog";
+import { recordSimulationRun } from "@/lib/takt/stats";
 import {
   FastForward,
   Pause,
@@ -151,6 +152,7 @@ export function Simulator() {
     setCompare(null);
     setStarted(true);
     setAuto(true);
+    void recordSimulationRun();
   };
 
   useEffect(() => {
@@ -199,6 +201,7 @@ export function Simulator() {
     }
     setCompare(runPresetCompare(cfg, seed));
     setState(runToCompletion(cfg, seed).final);
+    void recordSimulationRun();
   };
 
   const setTeam = (index: number, patch: Partial<TeamSetup>) => {

@@ -190,6 +190,17 @@ export function ManualDialog({
               <li>Proyek selesai — tepuk tangan</li>
             </ul>
           </section>
+
+          <section>
+            <h3 className="font-semibold text-fg">Statistik penggunaan</h3>
+            <p className="mt-1 leading-relaxed">
+              Angka <strong className="text-fg">Pengunjung</strong> di header =
+              perangkat unik yang pernah membuka aplikasi (satu kali per
+              browser). <strong className="text-fg">Simulasi</strong> bertambah
+              setiap kali Start atau bandingkan skenario dijalankan. Tidak
+              menyimpan nama, email, atau data pribadi.
+            </p>
+          </section>
         </div>
 
         <div className="border-t border-border px-4 py-3 sm:px-5">

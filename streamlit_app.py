@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import base64
+import json
 import time
 import traceback
+import urllib.request
 from pathlib import Path
 
 import streamlit as st
@@ -325,16 +327,56 @@ def start_label(sw: int) -> str:
     return "JIT" if int(sw) == START_JIT else "M{}".format(int(sw) + 1)
 
 
+_STATS_NS = "https://abacus.jasoncameron.dev"
+
+
+def _stats_fetch(path: str) -> int:
+    url = "{}/{}".format(_STATS_NS, path)
+    req = urllib.request.Request(url, headers={"User-Agent": "rusun-takt"})
+    with urllib.request.urlopen(req, timeout=4) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    return max(0, int(data.get("value") or 0))
+
+
+def get_usage_stats() -> tuple[int, int]:
+    try:
+        return (
+            _stats_fetch("get/rusun-takt/users"),
+            _stats_fetch("get/rusun-takt/sims"),
+        )
+    except Exception:
+        return (-1, -1)
+
+
+def bump_usage(kind: str) -> tuple[int, int]:
+    key = "users" if kind == "visit" else "sims"
+    try:
+        _stats_fetch("hit/rusun-takt/{}".format(key))
+    except Exception:
+        pass
+    return get_usage_stats()
+
+
+def ensure_visit_counted() -> None:
+    if st.session_state.get("_visit_counted"):
+        return
+    bump_usage("visit")
+    st.session_state["_visit_counted"] = True
+
+
 def hero() -> None:
     img = ""
     if LOGO.exists():
         b64 = base64.b64encode(LOGO.read_bytes()).decode("ascii")
         img = '<img src="data:image/png;base64,{}" alt="Logo" />'.format(b64)
+    visitors, sims = get_usage_stats()
+    vtxt = "…" if visitors < 0 else "{:,}".format(visitors).replace(",", ".")
+    stxt = "…" if sims < 0 else "{:,}".format(sims).replace(",", ".")
     st.markdown(
         """
 <div class="hero">
   {img}
-  <div>
+  <div style="flex:1">
     <h1>Rusun Takt</h1>
     <p>Simulasi parade tim kerja dan metodologi Takt — push, capacity building, flow.</p>
     <div class="badge-row">
@@ -344,8 +386,18 @@ def hero() -> None:
       <span class="badge blue">1 minggu = 7 hari</span>
     </div>
   </div>
+  <div style="display:flex;gap:8px;flex-shrink:0">
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:8px 12px;min-width:88px">
+      <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase">Pengunjung</div>
+      <div style="font-size:1.25rem;font-weight:800;color:#0c4a6e">{v}</div>
+    </div>
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:8px 12px;min-width:88px">
+      <div style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase">Simulasi</div>
+      <div style="font-size:1.25rem;font-weight:800;color:#0c4a6e">{s}</div>
+    </div>
+  </div>
 </div>
-""".format(img=img),
+""".format(img=img, v=vtxt, s=stxt),
         unsafe_allow_html=True,
     )
 
@@ -901,6 +953,7 @@ def collect_setup():
 
 def main() -> None:
     init_session()
+    ensure_visit_counted()
     hero()
 
     st.markdown(
@@ -1054,6 +1107,7 @@ Simulasi per **hari**. Takt plan diagregasi per minggu:
         st.session_state.sim_state = create_initial_state(cfg)
         st.session_state.running = True
         st.session_state["_sfx_done"] = False
+        bump_usage("sim")
         play_sfx("zone", announce=False)  # unlock audio
         st.rerun()
 

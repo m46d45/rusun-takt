@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Simulator } from "@/components/takt/Simulator";
+import { UsageStatsBar } from "@/components/takt/UsageStats";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -40,7 +41,7 @@ function HomePage() {
               alt="Logo Rusun Takt"
               className="h-20 w-20 shrink-0 rounded-2xl border-2 border-amber-300 bg-sky-50 object-cover shadow-md sm:h-24 sm:w-24"
             />
-            <div className="min-w-0 space-y-2">
+            <div className="min-w-0 flex-1 space-y-2">
               <h1 className="font-display text-3xl text-sky-950 sm:text-4xl">
                 Rusun Takt
               </h1>
@@ -61,6 +62,7 @@ function HomePage() {
                 </span>
               </div>
             </div>
+            <UsageStatsBar />
           </div>
         </header>
         <Simulator />
