@@ -21,8 +21,8 @@ import {
   computeFinance,
   createInitialState,
   createRng,
-  defaultConfig,
   runPresetCompare,
+  runPushVsJitCompare,
   runToCompletion,
   stepDay,
 } from "@/lib/takt/engine";
@@ -33,6 +33,15 @@ import {
   unlockAudio,
 } from "@/lib/takt/sounds";
 import type { RunResult, SimConfig, SimSnapshot, TeamSetup } from "@/lib/takt/types";
+import {
+  WORKSHOP_SCENARIOS,
+  buildDebriefCopy,
+  buildExportText,
+  downloadTextFile,
+  snapshotToRunResult,
+  type DebriefKind,
+  type WorkshopScenarioId,
+} from "@/lib/takt/workshop";
 import { Button } from "@/components/ui/button";
 import { Board } from "./Board";
 import { MetricsPanel } from "./Metrics";
@@ -40,14 +49,17 @@ import { Debrief } from "./Debrief";
 import { ResultsChart } from "./ResultsChart";
 import { HelmetBadge } from "./Helmet";
 import { ManualDialog } from "./ManualDialog";
+import { GlossaryDialog } from "./GlossaryDialog";
 import { recordSimulationRun } from "@/lib/takt/stats";
 import {
+  BookOpen,
+  Download,
   FastForward,
   Pause,
   Play,
   RotateCcw,
   StepForward,
-  BookOpen,
+  BookMarked,
 } from "lucide-react";
 import { formatRp } from "@/lib/utils";
 
@@ -68,7 +80,6 @@ function clampCap(n: number): number {
   return Math.max(CAP_MIN, Math.min(CAP_MAX, Math.round(n) || CAP_MIN));
 }
 
-/** Zona selesai = wagon terakhir (Cat) progress melewati index zona */
 function completedZonesCount(teams: SimSnapshot["teams"]): number {
   const last = teams[TEAMS.length - 1]?.progress ?? 0;
   return Math.min(TOTAL_UNITS, last);
@@ -78,10 +89,6 @@ function finishedTeamCount(teams: SimSnapshot["teams"]): number {
   return teams.filter((t) => t.progress >= TOTAL_UNITS).length;
 }
 
-/**
- * Putar suara saat state maju (bukan saat reset).
- * Prioritas: Tada > Yes > Ting (hindari overlapping terlalu banyak).
- */
 function playProgressSounds(prev: SimSnapshot, next: SimSnapshot): void {
   if (next.day <= prev.day) return;
 
@@ -103,22 +110,29 @@ function playProgressSounds(prev: SimSnapshot, next: SimSnapshot): void {
   }
 }
 
+type UiMode = "workshop" | "advanced";
+
 export function Simulator() {
-  const [draft, setDraft] = useState<SimConfig>(() => defaultConfig());
-  const [seed] = useState(DEFAULT_SEED);
+  const [mode, setMode] = useState<UiMode>("workshop");
+  const [scenarioId, setScenarioId] = useState<WorkshopScenarioId>("push-16");
+  const [draft, setDraft] = useState<SimConfig>(() =>
+    WORKSHOP_SCENARIOS[0]!.build(),
+  );
+  const [seed, setSeed] = useState(DEFAULT_SEED);
   const [state, setState] = useState<SimSnapshot>(() =>
-    createInitialState(defaultConfig()),
+    createInitialState(WORKSHOP_SCENARIOS[0]!.build()),
   );
   const rngRef = useRef(createRng(DEFAULT_SEED));
   const prevStateRef = useRef(state);
   const [auto, setAuto] = useState(false);
   const [started, setStarted] = useState(false);
   const [compare, setCompare] = useState<RunResult[] | null>(null);
+  const [debriefKind, setDebriefKind] = useState<DebriefKind>("push-jit");
   const [speedMs, setSpeedMs] = useState(DEFAULT_SPEED_MS);
-  const [showSetup, setShowSetup] = useState(true);
+  const [showSetup, setShowSetup] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [glossaryOpen, setGlossaryOpen] = useState(false);
 
-  // Deteksi momen: zona selesai / tim selesai / proyek selesai
   useEffect(() => {
     const prev = prevStateRef.current;
     if (started) {
@@ -128,9 +142,9 @@ export function Simulator() {
   }, [state, started]);
 
   const resetToSetup = useCallback(
-    (cfg: SimConfig) => {
+    (cfg: SimConfig, nextSeed = seed) => {
       const normalized = cloneConfig(cfg);
-      rngRef.current = createRng(seed);
+      rngRef.current = createRng(nextSeed);
       setDraft(normalized);
       const initial = createInitialState(normalized);
       prevStateRef.current = initial;
@@ -181,8 +195,6 @@ export function Simulator() {
       let next = s;
       const rng = rngRef.current;
       let guard = 0;
-      // Langkah demi langkah agar suara tetap terdengar per momen (cap agar tidak terlalu lama)
-      // Untuk "Selesaikan" cepat: jalankan semua, suara hanya di momen penting terakhir
       while (!next.finished && guard < 2000) {
         next = stepDay(next, rng);
         guard++;
@@ -191,7 +203,26 @@ export function Simulator() {
     });
   };
 
-  const runCompare = () => {
+  const applyPushJitCompare = (nextSeed = seed) => {
+    unlockAudio();
+    setAuto(false);
+    const cfg = cloneConfig(draft);
+    const first = cfg.teams[0]!;
+    const results = runPushVsJitCompare(nextSeed, {
+      diceMin: first.diceMin,
+      diceMax: first.diceMax,
+      ownerDurationDays: cfg.ownerDurationDays,
+      contractValue: cfg.contractValue,
+      dailyCost: first.dailyCost,
+    });
+    setDebriefKind("push-jit");
+    setCompare(results);
+    setState(runToCompletion(cfg, nextSeed).final);
+    setStarted(true);
+    void recordSimulationRun();
+  };
+
+  const applyCapacityCompare = () => {
     unlockAudio();
     setAuto(false);
     const cfg = cloneConfig(started ? state.config : draft);
@@ -199,9 +230,35 @@ export function Simulator() {
       rngRef.current = createRng(seed);
       setStarted(true);
     }
+    setDebriefKind("capacity");
     setCompare(runPresetCompare(cfg, seed));
     setState(runToCompletion(cfg, seed).final);
     void recordSimulationRun();
+  };
+
+  const applyScenario = (id: WorkshopScenarioId) => {
+    const scenario = WORKSHOP_SCENARIOS.find((s) => s.id === id)!;
+    setScenarioId(id);
+    const cfg = scenario.build();
+    if (scenario.compare) {
+      unlockAudio();
+      setDraft(cfg);
+      rngRef.current = createRng(seed);
+      setAuto(false);
+      const results = runPushVsJitCompare(seed, {
+        diceMin: 1,
+        diceMax: 6,
+        ownerDurationDays: cfg.ownerDurationDays,
+        contractValue: cfg.contractValue,
+      });
+      setDebriefKind("push-jit");
+      setCompare(results);
+      setState(runToCompletion(cfg, seed).final);
+      setStarted(true);
+      void recordSimulationRun();
+      return;
+    }
+    resetToSetup(cfg);
   };
 
   const setTeam = (index: number, patch: Partial<TeamSetup>) => {
@@ -233,6 +290,47 @@ export function Simulator() {
       ? `${((state.metrics.wasteCost / state.metrics.totalCost) * 100).toFixed(0)}%`
       : null;
 
+  const singleDebriefResults = useMemo(() => {
+    if (!state.finished || compare) return null;
+    return [
+      snapshotToRunResult(
+        activeConfig.name ?? "Run ini",
+        state,
+        finance,
+      ),
+    ];
+  }, [state, compare, activeConfig.name, finance]);
+
+  const exportResults = () => {
+    const results =
+      compare ??
+      (state.finished
+        ? [
+            snapshotToRunResult(
+              activeConfig.name ?? "Run ini",
+              state,
+              finance,
+            ),
+          ]
+        : null);
+    if (!results || results.length === 0) return;
+    const kind: DebriefKind = compare ? debriefKind : "single";
+    const { findings } = buildDebriefCopy(results, kind);
+    const text = buildExportText({
+      title: "Rusun Takt",
+      seed,
+      configName: activeConfig.name,
+      results,
+      notes: findings,
+    });
+    downloadTextFile(
+      `rusun-takt-ringkasan-seed${seed}.txt`,
+      text,
+    );
+  };
+
+  const canExport = Boolean(compare || state.finished);
+
   return (
     <div className="space-y-5">
       <div className="rounded-xl border border-border bg-surface px-4 py-4 sm:px-5">
@@ -242,19 +340,32 @@ export function Simulator() {
               Aturan Aliran Kerja
             </h2>
             <p className="mt-1 text-xs text-muted">
-              Baca manual dulu sebelum menjalankan simulasi.
+              Baca istilah & manual singkat sebelum Start. Simulasi jalan di
+              browser Anda — tanpa akun.
             </p>
           </div>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            onClick={() => setManualOpen(true)}
-            className="min-h-10 shrink-0"
-          >
-            <BookOpen className="h-4 w-4" />
-            Baca manual
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setGlossaryOpen(true)}
+              className="min-h-10 shrink-0"
+            >
+              <BookMarked className="h-4 w-4" />
+              Istilah
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => setManualOpen(true)}
+              className="min-h-10 shrink-0"
+            >
+              <BookOpen className="h-4 w-4" />
+              Baca manual
+            </Button>
+          </div>
         </div>
         <div className="mt-3 space-y-2.5 text-sm text-muted">
           <p>
@@ -267,47 +378,18 @@ export function Simulator() {
             <span className="font-semibold text-fg">2. Satu zona, satu tim.</span>{" "}
             Per lantai ada 5 zona:{" "}
             <strong className="text-fg">{ZONE_LABELS.join(" · ")}</strong>.
-            Tidak boleh dua tim di zona yang sama. Tim berikutnya baru masuk
-            setelah tim sebelumnya <em>meninggalkan</em> zona itu (paling cepat
-            hari berikutnya).
-          </p>
-          <p>
-            <span className="font-semibold text-fg">3. Alur zona.</span> Tiap
-            tim mengerjakan zona berurutan: U1 → U2 → Tangga → U3 → U4, lalu
-            naik ke lantai berikutnya dengan pola yang sama.
+            Tidak boleh dua tim di zona yang sama.
           </p>
           <p>
             <span className="font-semibold text-fg">
-              4. Curing beton ({CURING_DAYS} hari).
+              3. Curing beton ({CURING_DAYS} hari).
             </span>{" "}
-            Setelah <strong className="text-fg">Pelat</strong> selesai di suatu
-            zona, zona itu di-curing {CURING_DAYS} hari, baru bekisting dilepas.
-            Tim Dinding (dan setelahnya) baru boleh masuk zona itu setelah
-            curing selesai. Struktur ke lantai atas menunggu curing zona di
-            bawahnya.
+            Setelah Pelat selesai, zona di-curing {CURING_DAYS} hari sebelum
+            Dinding masuk.
           </p>
           <p>
-            <span className="font-semibold text-fg">5. Start Kerja.</span>{" "}
-            <strong className="text-fg">Minggu 1–7</strong> = tim sudah di site
-            (dibayar) sejak minggu itu meski belum dapat zona (push → bisa
-            waste). <strong className="text-fg">JIT</strong> = tim baru mulai
-            (dan dibayar) segera saat zona pertama kali boleh dimasuki — sehari
-            setelah wagon depan lepas / syarat curing terpenuhi.
-          </p>
-          <p>
-            <span className="font-semibold text-fg">
-              6. Biaya = tenaga kerja di site saja.
-            </span>{" "}
-            Nilai kontrak di simulasi ={" "}
-            <strong className="text-fg">porsi tenaga kerja</strong> (bukan total
-            kontrak bangunan). Yang dihitung: upah saat tim di site (termasuk
-            menunggu = waste).{" "}
-            <strong className="text-fg">Mob/demob perorangan</strong>, headcount
-            regu, serta <strong className="text-fg">material & alat</strong>{" "}
-            dari kontraktor utama{" "}
-            <strong className="text-fg">tidak dimodelkan</strong> — tidak
-            menjadi kendala dan tidak dihitung. Fokus pembelajaran: aliran takt
-            & waste menunggu antar trade, bukan optimasi jumlah orang.
+            <span className="font-semibold text-fg">4. Push vs JIT.</span>{" "}
+            Minggu 1–7 = push (bisa waste). JIT = baru dibayar saat zona siap.
           </p>
           {started && state.day > 0 ? (
             <p className="tabular text-xs text-subtle">
@@ -318,13 +400,141 @@ export function Simulator() {
         </div>
       </div>
 
+      <div className="rounded-xl border-2 border-sky-300 bg-white/90 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-display text-xl text-fg">Mode pelatihan</h2>
+            <p className="mt-1 text-xs text-muted">
+              Workshop = skenario siap pakai. Lanjutan = atur tiap tim.
+            </p>
+          </div>
+          <div className="flex rounded-lg border border-border bg-surface-2 p-1">
+            <button
+              type="button"
+              className={
+                mode === "workshop"
+                  ? "rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
+                  : "rounded-md px-3 py-1.5 text-xs font-medium text-muted"
+              }
+              onClick={() => {
+                setMode("workshop");
+                setShowSetup(false);
+              }}
+            >
+              Workshop
+            </button>
+            <button
+              type="button"
+              className={
+                mode === "advanced"
+                  ? "rounded-md bg-accent px-3 py-1.5 text-xs font-semibold text-accent-fg"
+                  : "rounded-md px-3 py-1.5 text-xs font-medium text-muted"
+              }
+              onClick={() => {
+                setMode("advanced");
+                setShowSetup(true);
+              }}
+            >
+              Lanjutan
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-end gap-3">
+          <label className="block text-sm">
+            <span className="text-xs font-medium uppercase tracking-wide text-subtle">
+              Seed acak
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={seed}
+              onChange={(e) => {
+                const v = Math.max(0, Math.round(Number(e.target.value) || 0));
+                setSeed(v);
+              }}
+              className="mt-1 h-10 w-28 rounded-md border border-border bg-surface px-3 tabular text-fg"
+            />
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-h-10"
+            onClick={() => {
+              const v = Math.floor(Math.random() * 10_000);
+              setSeed(v);
+            }}
+          >
+            Acak seed
+          </Button>
+          <p className="max-w-md text-[11px] text-subtle">
+            Seed sama = hasil sama antar kelompok (cocok untuk kelas). Default{" "}
+            {DEFAULT_SEED}.
+          </p>
+        </div>
+
+        {mode === "workshop" ? (
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {WORKSHOP_SCENARIOS.map((s) => {
+              const active = scenarioId === s.id;
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => applyScenario(s.id)}
+                  className={
+                    active
+                      ? "rounded-xl border-2 border-accent bg-sky-50 p-3 text-left shadow-sm"
+                      : "rounded-xl border border-border bg-surface p-3 text-left hover:border-accent/50"
+                  }
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-800 text-sm font-bold text-white">
+                      {s.letter}
+                    </span>
+                    <span className="font-semibold text-fg">{s.title}</span>
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed text-muted">
+                    {s.blurb}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {mode === "workshop" && !WORKSHOP_SCENARIOS.find((s) => s.id === scenarioId)?.compare ? (
+          <div className="mt-4">
+            {!started ? (
+              <Button
+                type="button"
+                size="lg"
+                onClick={startRun}
+                className="min-h-12 w-full sm:w-auto sm:min-w-[10rem]"
+              >
+                <Play className="h-5 w-5" />
+                Start skenario
+              </Button>
+            ) : (
+              <p className="text-sm text-muted">
+                Skenario aktif:{" "}
+                <strong className="text-fg">{draft.name ?? "—"}</strong>
+                . Gunakan kontrol di bawah papan.
+              </p>
+            )}
+          </div>
+        ) : null}
+      </div>
+
       <div className="rounded-xl border border-border bg-surface p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="font-display text-xl text-fg">Setup tim kerja</h2>
             <p className="mt-1 text-xs text-muted">
-              Start Kerja (M1–M7 / JIT) · variasi kapasitas · target owner &
-              kontrak
+              {mode === "workshop"
+                ? "Opsional di mode Workshop — buka jika ingin menyesuaikan angka."
+                : "Start Kerja (M1–M7 / JIT) · variasi kapasitas · target owner & kontrak"}
             </p>
           </div>
           <Button
@@ -376,27 +586,18 @@ export function Simulator() {
                   onChange={(e) =>
                     setDraft((d) => ({
                       ...d,
-                      contractValue: Math.max(
-                        0,
-                        Math.round(Number(e.target.value) || 0) *
-                          CONTRACT_UI_SCALE,
-                      ),
+                      contractValue:
+                        Math.max(0, Number(e.target.value) || 0) *
+                        CONTRACT_UI_SCALE,
                     }))
                   }
                   className="mt-1 h-10 w-full rounded-md border border-border bg-surface px-3 tabular text-fg"
                 />
                 <span className="mt-0.5 block text-[10px] text-subtle">
-                  = {formatRp(draft.contractValue)} · default{" "}
-                  {DEFAULT_CONTRACT_VALUE / CONTRACT_UI_SCALE} jt
+                  Default {DEFAULT_CONTRACT_VALUE / CONTRACT_UI_SCALE} jt ·{" "}
+                  {formatRp(draft.contractValue)}
                 </span>
               </label>
-              <p className="text-[11px] text-subtle sm:col-span-2">
-                Biaya = tenaga di site saja (termasuk menunggu). Kontrak = porsi
-                tenaga. Mob/demob perorangan, headcount, material & alat dari
-                kontraktor utama — di luar model, bukan kendala. Penalti =
-                terlambat × (1/1000) × kontrak tenaga. Margin = kontrak − biaya
-                tenaga − penalti.
-              </p>
             </div>
 
             <div className="overflow-x-auto">
@@ -535,9 +736,8 @@ export function Simulator() {
               </table>
             </div>
             <p className="text-[11px] text-subtle">
-              JIT = mulai saat zona siap (tanpa idle bayar di depan). Minggu 1–7
-              = push (bisa menunggu = waste). Variasi 2–2 = konstan 2 hari/zona.
-              Biaya {defaultInput} → {formatRp(DEFAULT_DAILY_COST)}/hari.
+              JIT = mulai saat zona siap. Minggu 1–7 = push. Biaya {defaultInput}{" "}
+              → {formatRp(DEFAULT_DAILY_COST)}/hari.
             </p>
 
             {!started ? (
@@ -577,7 +777,7 @@ export function Simulator() {
           </div>
         )}
 
-        {!showSetup && !started ? (
+        {!showSetup && !started && mode === "advanced" ? (
           <div className="mt-4">
             <Button
               type="button"
@@ -637,10 +837,18 @@ export function Simulator() {
           <Button
             type="button"
             variant="outline"
-            onClick={runCompare}
+            onClick={() => applyPushJitCompare()}
             className="min-h-11"
           >
-            Bandingkan
+            Bandingkan Push vs JIT
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={applyCapacityCompare}
+            className="min-h-11"
+          >
+            Bandingkan kapasitas
           </Button>
           <Button
             type="button"
@@ -650,6 +858,16 @@ export function Simulator() {
           >
             <RotateCcw className="h-4 w-4" />
             Reset
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={exportResults}
+            disabled={!canExport}
+            className="min-h-11"
+          >
+            <Download className="h-4 w-4" />
+            Unduh ringkasan
           </Button>
           <label className="flex w-full items-center gap-2 text-xs text-muted sm:ml-auto sm:w-auto">
             Kecepatan simulasi
@@ -667,6 +885,30 @@ export function Simulator() {
           </label>
         </div>
       )}
+
+      {!started && mode === "workshop" ? (
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => applyPushJitCompare()}
+            className="min-h-11"
+          >
+            Langsung bandingkan Push vs JIT
+          </Button>
+          {canExport ? (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={exportResults}
+              className="min-h-11"
+            >
+              <Download className="h-4 w-4" />
+              Unduh ringkasan
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_18rem]">
         <Board
@@ -697,7 +939,10 @@ export function Simulator() {
       </div>
 
       {state.finished ? <ResultsChart state={state} /> : null}
-      {compare ? <Debrief results={compare} /> : null}
+      {compare ? <Debrief results={compare} kind={debriefKind} /> : null}
+      {singleDebriefResults ? (
+        <Debrief results={singleDebriefResults} kind="single" />
+      ) : null}
       {state.finished && !compare ? (
         <div className="rounded-xl border border-ok/40 bg-ok/10 p-4 text-sm text-muted">
           Selesai {formatDayWeek(state.metrics.finishDay ?? state.day)} (
@@ -731,10 +976,20 @@ export function Simulator() {
             </>
           ) : null}
           .
+          <div className="mt-3">
+            <Button type="button" variant="secondary" size="sm" onClick={exportResults}>
+              <Download className="h-4 w-4" />
+              Unduh ringkasan
+            </Button>
+          </div>
         </div>
       ) : null}
 
       <ManualDialog open={manualOpen} onClose={() => setManualOpen(false)} />
+      <GlossaryDialog
+        open={glossaryOpen}
+        onClose={() => setGlossaryOpen(false)}
+      />
     </div>
   );
 }

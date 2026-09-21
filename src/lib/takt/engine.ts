@@ -563,6 +563,31 @@ export function runPresetCompare(
   return presets.map((c) => runToCompletion(c, seed).result);
 }
 
+/** Bandingkan Push (M1) vs JIT dengan kapasitas & biaya yang sama. */
+export function runPushVsJitCompare(
+  seed: number,
+  opts?: {
+    diceMin?: number;
+    diceMax?: number;
+    ownerDurationDays?: number;
+    contractValue?: number;
+    dailyCost?: number;
+  },
+): RunResult[] {
+  const lo = opts?.diceMin ?? 1;
+  const hi = opts?.diceMax ?? 6;
+  const owner = opts?.ownerDurationDays ?? DEFAULT_OWNER_DURATION;
+  const contract = opts?.contractValue ?? DEFAULT_CONTRACT_VALUE;
+  const cost = opts?.dailyCost ?? DEFAULT_DAILY_COST;
+  const pushStarts = TEAMS.map(() => 0);
+  const jitStarts = TEAMS.map(() => START_JIT);
+  const presets = [
+    makeConfig(lo, hi, pushStarts, "Push · M1", cost, owner, contract),
+    makeConfig(lo, hi, jitStarts, "JIT", cost, owner, contract),
+  ];
+  return presets.map((c) => runToCompletion(c, seed).result);
+}
+
 export function buildFlowGrid(history: DayHistory[]): {
   weeks: number;
   completedBy: number[][];

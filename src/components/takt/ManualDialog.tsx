@@ -53,6 +53,16 @@ export function ManualDialog({
 
         <div className="space-y-5 overflow-y-auto px-4 py-4 text-sm text-muted sm:px-5">
           <section>
+            <h3 className="font-semibold text-fg">Mode Workshop</h3>
+            <p className="mt-1 leading-relaxed">
+              Untuk pelatihan: pilih skenario A–C lalu Start, atau D untuk
+              bandingkan Push vs JIT. Samakan <strong className="text-fg">seed</strong>{" "}
+              antar kelompok. Unduh ringkasan setelah selesai. Mode Lanjutan =
+              atur tiap tim manual.
+            </p>
+          </section>
+
+          <section>
             <h3 className="font-semibold text-fg">Apa ini?</h3>
             <p className="mt-1 leading-relaxed">
               Simulasi pendidikan lean construction untuk rusun 3 lantai. Anda

@@ -1,6 +1,10 @@
 import { formatDuration } from "@/lib/takt/constants";
 import type { RunResult } from "@/lib/takt/types";
-import { formatNumber, formatRp } from "@/lib/utils";
+import {
+  buildDebriefCopy,
+  type DebriefKind,
+} from "@/lib/takt/workshop";
+import { formatRp } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 function wastePct(waste: number, total: number): string {
@@ -8,19 +12,64 @@ function wastePct(waste: number, total: number): string {
   return `${((waste / total) * 100).toFixed(0)}%`;
 }
 
-export function Debrief({ results }: { results: RunResult[] }) {
+export function Debrief({
+  results,
+  kind = "capacity",
+}: {
+  results: RunResult[];
+  kind?: DebriefKind;
+}) {
   if (results.length === 0) return null;
 
   const bestMargin = [...results].sort((a, b) => b.margin - a.margin)[0]!;
   const leastWaste = [...results].sort((a, b) => a.wasteCost - b.wasteCost)[0]!;
   const fastest = [...results].sort((a, b) => a.finishDay - b.finishDay)[0]!;
+  const { findings, questions } = buildDebriefCopy(results, kind);
+
+  const heading =
+    kind === "push-jit"
+      ? "Debrief: Push vs JIT"
+      : kind === "single"
+        ? "Debrief run"
+        : "Debrief: variasi kapasitas";
+
+  const sub =
+    kind === "push-jit"
+      ? "Kapasitas & kontrak sama · beda hanya cara memulai tim."
+      : kind === "single"
+        ? "Ringkasan pembelajaran dari run yang baru selesai."
+        : "Durasi owner & nilai kontrak sama · beda variasi kapasitas.";
 
   return (
     <div className="rounded-xl border border-border bg-surface p-4 sm:p-5">
-      <h2 className="font-display text-2xl text-fg">Perbandingan</h2>
-      <p className="mt-1 text-sm text-muted">
-        Durasi owner & nilai kontrak sama · beda variasi kapasitas.
-      </p>
+      <h2 className="font-display text-2xl text-fg">{heading}</h2>
+      <p className="mt-1 text-sm text-muted">{sub}</p>
+
+      {findings.length > 0 ? (
+        <div className="mt-4 rounded-lg border border-sky-200 bg-sky-50/80 p-3 sm:p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-sky-900">
+            Temuan kunci
+          </p>
+          <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm text-sky-950">
+            {findings.map((f) => (
+              <li key={f}>{f}</li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
+
+      {questions.length > 0 ? (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50/70 p-3 sm:p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-amber-950">
+            Diskusi
+          </p>
+          <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm text-amber-950">
+            {questions.map((q) => (
+              <li key={q}>{q}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="mt-4 overflow-x-auto">
         <table className="w-full min-w-[40rem] border-collapse text-left text-sm">

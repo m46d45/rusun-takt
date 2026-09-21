@@ -46,9 +46,9 @@ function HomePage() {
                 Rusun Takt
               </h1>
               <p className="max-w-2xl text-sm text-muted sm:text-base">
-                Simulasi parade tim kerja dan metodologi Takt. Pembelajaran
-                dampak dari metode dorong (push), pengembangan kapasitas
-                (capacity building) dan aliran (flow) dengan pendekatan Takt.
+                Simulasi parade tim kerja dan metodologi Takt di browser Anda —
+                tanpa akun. Mode Workshop siap untuk pelatihan: push, JIT,
+                kapasitas, dan debrief.
               </p>
               <div className="flex flex-wrap gap-2">
                 <span className="rounded-full border border-sky-300 bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-900">
