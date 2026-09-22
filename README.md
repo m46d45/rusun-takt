@@ -2,6 +2,19 @@
 
 Simulasi pendidikan **lean construction** untuk rusun 3 lantai — terinspirasi [Takt Towers](https://theleanbuilder.com/takt-towers-why-pushing-doesnt-work/).
 
+**Peserta hanya butuh browser.** Buka URL aplikasi web, tanpa akun dan tanpa instal. Simulasi berjalan di perangkat masing-masing (cocok untuk banyak orang / kelas).
+
+Aplikasi publik: [rusun-takt.vercel.app](https://rusun-takt.vercel.app)
+
+## Untuk peserta
+
+1. Buka URL di atas.
+2. Mode **Workshop** → pilih skenario **A / B / C**, lalu **Start skenario**.
+3. Atau pilih **D** / tombol **Bandingkan Push vs JIT** untuk debrief cepat.
+4. Baca **Istilah** jika ada kata asing; **Unduh ringkasan** setelah selesai.
+
+Panduan kelas: [`docs/PELATIHAN.md`](docs/PELATIHAN.md)
+
 ## Apa yang dipelajari
 
 - **Parade of trades** (barisan wagon) — 7 tim kerja berurutan
@@ -27,67 +40,37 @@ Simulasi pendidikan **lean construction** untuk rusun 3 lantai — terinspirasi 
 6. Keramik & plafon
 7. Pengecatan
 
-## Menjalankan
+## Untuk fasilitator
+
+- Set **seed sama** (default 42) agar hasil kelompok bisa dibandingkan.
+- Ikuti agenda 60/90 menit di [`docs/PELATIHAN.md`](docs/PELATIHAN.md).
+- Mode **Lanjutan** hanya jika peserta sudah paham skenario Workshop.
+
+## Untuk pengembang (opsional)
+
+Menjalankan UI React di mesin sendiri:
 
 ```bash
 npm install
 npm run dev
 ```
 
-Buka `http://localhost:8080`.
-
 ```bash
 npm run typecheck
 npm run build
 ```
 
-## Stack
+Stack: React 19 · TypeScript · Vite · TanStack Start · Tailwind CSS
 
-React 19 · TypeScript · Vite · TanStack Start · Tailwind CSS
+### Streamlit (opsional / legacy)
 
-## Lisensi
-
-Proyek edukasi — silakan dipakai dan dimodifikasi untuk pembelajaran.
-
-
-## Streamlit (deploy online)
-
-Aplikasi Python untuk [Streamlit Community Cloud](https://share.streamlit.io):
+Ada aplikasi Python terpisah untuk eksperimen di Streamlit Community Cloud. **Jalur utama pelatihan publik adalah aplikasi web React di atas** — bukan Streamlit.
 
 ```bash
 pip install -r requirements.txt
 streamlit run streamlit_app.py
 ```
 
-### Deploy ke streamlit.io
+## Lisensi
 
-1. Buka [share.streamlit.io](https://share.streamlit.io) dan login dengan GitHub
-2. **New app** → repo `m46d45/rusun-takt` → branch `main`
-3. Main file: `streamlit_app.py`
-4. Deploy
-
-File terkait: `streamlit_app.py`, `rusun_takt_engine.py`, `requirements.txt`, `.streamlit/config.toml`
-
-## Vercel (web app React — full UI + animasi)
-
-Deploy aplikasi **sandbox** (React/TanStack) ke Vercel:
-
-1. Buka [vercel.com/new](https://vercel.com/new) → **Import** repo `m46d45/rusun-takt`
-2. Framework: biarkan deteksi / gunakan `vercel.json`
-3. Build Command: `npm run build`
-4. Deploy
-
-Atau satu klik (setelah login Vercel + hubungkan GitHub):
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/m46d45/rusun-takt)
-
-CLI (lokal, butuh token):
-
-```bash
-npm i -g vercel
-vercel login
-vercel --prod
-```
-
-Build menghasilkan `.vercel/output` (preset Nitro Vercel). Pastikan `npm run build` lulus sebelum deploy.
-
+[MIT](LICENSE) — silakan dipakai dan dimodifikasi untuk pembelajaran.

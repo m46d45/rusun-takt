@@ -16,7 +16,13 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Simulasi parade tim kerja dan metodologi Takt: push, capacity building, dan flow.",
+          "Simulasi lean construction / takt di browser — workshop Push vs JIT untuk pelatihan.",
+      },
+      { property: "og:title", content: "Rusun Takt" },
+      {
+        property: "og:description",
+        content:
+          "Simulasi lean construction / takt di browser — workshop Push vs JIT untuk pelatihan.",
       },
       { name: "theme-color", content: "#0c4a6e" },
     ],
